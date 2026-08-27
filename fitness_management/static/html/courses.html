@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>课程预约 - 健身管理系统</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-page="courses">
+  <div class="app-layout">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <span class="brand-mark">健</span>
+        <div>
+          <div class="brand-name">健身管理系统</div>
+          <div class="brand-sub">运营后台</div>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-section">
+          <div class="nav-section-title">运营管理</div>
+          <a class="nav-link" data-page="dashboard" href="index.html">数据大盘</a>
+          <a class="nav-link" data-page="members" href="members.html">会员管理</a>
+          <a class="nav-link" data-page="coaches" href="coaches.html">教练管理</a>
+          <a class="nav-link" data-page="courses" href="courses.html">课程预约</a>
+          <a class="nav-link" data-page="equipment" href="equipment.html">器材管理</a>
+          <a class="nav-link" data-page="system" href="system.html">系统配置</a>
+        </div>
+        <div class="nav-section">
+          <div class="nav-section-title">业务入口</div>
+          <a class="nav-link" href="reception.html">前台运营工作台</a>
+          <a class="nav-link" href="member_center.html">会员个人中心</a>
+          <a class="nav-link" href="coach_panel.html">教练工作台</a>
+        </div>
+      </nav>
+      <div class="sidebar-footer">
+        <div>当前日期：<span data-current-date></span></div>
+        <div>© <span data-current-year></span> 健身管理系统</div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="icon-btn mobile-menu-btn" id="mobile-menu-btn" type="button" aria-label="打开菜单">☰</button>
+          <div class="topbar-title" data-dynamic-title="courses">课程预约</div>
+        </div>
+        <div class="topbar-right">
+          <div class="user-chip">
+            <span class="user-avatar">管</span>
+            <span>超级管理员</span>
+          </div>
+          <button class="btn btn-secondary btn-sm" id="logout-btn" type="button">退出</button>
+        </div>
+      </header>
+
+      <div class="page-content">
+        <div class="page-header">
+          <div>
+            <h1 data-dynamic-title="courses">课程预约</h1>
+            <p class="page-desc" data-dynamic-desc="courses">维护公共团课、私教课程和会员预约记录。</p>
+          </div>
+          <div class="page-actions">
+            <button class="btn btn-primary" type="button" id="add-course-btn">新增课程</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-body">
+            <div class="tabs" id="course-tabs">
+              <button class="tab-btn active" type="button" data-type="group">公共团课</button>
+              <button class="tab-btn" type="button" data-type="private">私教课程</button>
+            </div>
+            <div class="filter-bar" style="margin-top: 16px;">
+              <div class="field">
+                <label for="course-keyword">关键词</label>
+                <input id="course-keyword" type="search" placeholder="课程名称或教练">
+              </div>
+              <div class="field">
+                <label for="course-status-filter">状态</label>
+                <select id="course-status-filter">
+                  <option value="">全部状态</option>
+                  <option value="已上架">已上架</option>
+                  <option value="已下架">已下架</option>
+                  <option value="已满员">已满员</option>
+                </select>
+              </div>
+              <div class="page-actions" style="align-self: flex-end;">
+                <button class="btn btn-primary" type="button" id="course-search-btn">查询</button>
+                <button class="btn btn-secondary" type="button" id="course-reset-btn">重置</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <h2 class="panel-title" id="course-panel-title">公共团课</h2>
+            <span class="badge info" id="course-count">共 0 条</span>
+          </div>
+          <div class="panel-body no-padding">
+            <div class="data-table-wrap">
+              <table class="data-table" id="group-course-table">
+                <thead>
+                  <tr>
+                    <th>课程名称</th>
+                    <th>分类</th>
+                    <th>授课教练</th>
+                    <th>上课时间</th>
+                    <th>时长</th>
+                    <th>人数</th>
+                    <th>状态</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="group-course-body"></tbody>
+              </table>
+              <table class="data-table" id="private-course-table" style="display: none;">
+                <thead>
+                  <tr>
+                    <th>课程名称</th>
+                    <th>授课教练</th>
+                    <th>课时时长</th>
+                    <th>课时单价</th>
+                    <th>会员名额</th>
+                    <th>状态</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="private-course-body"></tbody>
+              </table>
+            </div>
+            <div class="pagination" id="course-pagination"></div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- 课程弹窗 -->
+  <div class="modal-mask" id="course-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title" id="course-modal-title">新增课程</h3>
+        <button class="icon-btn" type="button" data-close-modal="course-modal">×</button>
+      </div>
+      <div class="modal-body">
+        <form id="course-form">
+          <input type="hidden" id="course-id">
+          <div class="form-grid">
+            <div class="field full">
+              <label for="course-name">课程名称</label>
+              <input id="course-name" type="text" placeholder="请输入课程名称" required>
+            </div>
+            <div class="field" id="course-category-field">
+              <label for="course-category">课程分类</label>
+              <select id="course-category">
+                <option value="瑜伽">瑜伽</option>
+                <option value="有氧操">有氧操</option>
+                <option value="搏击操">搏击操</option>
+                <option value="动感单车">动感单车</option>
+                <option value="力量训练">力量训练</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="course-coach">授课教练</label>
+              <select id="course-coach">
+                <option value="张昊">张昊</option>
+                <option value="刘洋">刘洋</option>
+                <option value="周琪">周琪</option>
+                <option value="王哲">王哲</option>
+                <option value="孙悦">孙悦</option>
+                <option value="马涛">马涛</option>
+                <option value="郑雪">郑雪</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="course-duration">课程时长</label>
+              <select id="course-duration">
+                <option value="45">45 分钟</option>
+                <option value="60">60 分钟</option>
+                <option value="90">90 分钟</option>
+                <option value="120">120 分钟</option>
+              </select>
+            </div>
+            <div class="field" id="course-time-field">
+              <label for="course-time">上课时间</label>
+              <input id="course-time" type="text" placeholder="例如：周一 19:00">
+            </div>
+            <div class="field" id="course-capacity-field">
+              <label for="course-capacity">最大人数</label>
+              <input id="course-capacity" type="number" min="1" max="60" placeholder="请输入最大人数">
+            </div>
+            <div class="field">
+              <label for="course-price">课时单价</label>
+              <input id="course-price" type="number" min="0" step="0.01" placeholder="请输入价格">
+            </div>
+            <div class="field">
+              <label for="course-status">状态</label>
+              <select id="course-status">
+                <option value="已上架">已上架</option>
+                <option value="已下架">已下架</option>
+              </select>
+            </div>
+            <div class="field full">
+              <label for="course-remark">课程说明</label>
+              <textarea id="course-remark" placeholder="填写课程适用人群、注意事项等"></textarea>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" type="button" data-close-modal="course-modal">取消</button>
+        <button class="btn btn-primary" type="button" id="save-course-btn">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 预约名单弹窗 -->
+  <div class="modal-mask" id="reservation-modal">
+    <div class="modal lg">
+      <div class="modal-header">
+        <h3 class="modal-title">预约名单：<span id="reservation-course-name"></span></h3>
+        <button class="icon-btn" type="button" data-close-modal="reservation-modal">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="stat-grid three" style="margin-bottom: 16px;">
+          <div class="stat-card">
+            <div class="stat-icon">约</div>
+            <div>
+              <div class="stat-card-value" id="reservation-total">0</div>
+              <div class="stat-card-label">预约人数</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">到</div>
+            <div>
+              <div class="stat-card-value" id="reservation-checked">0</div>
+              <div class="stat-card-label">已签到</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon warn">冲</div>
+            <div>
+              <div class="stat-card-value" id="reservation-conflict">0</div>
+              <div class="stat-card-label">冲突记录</div>
+            </div>
+          </div>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>会员</th>
+              <th>手机号</th>
+              <th>预约时间</th>
+              <th>状态</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="reservation-table-body"></tbody>
+        </table>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" type="button" data-close-modal="reservation-modal">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-mask" id="confirm-modal">
+    <div class="modal sm">
+      <div class="modal-header">
+        <h3 class="modal-title">操作确认</h3>
+        <button class="icon-btn" type="button" data-close-modal="confirm-modal">×</button>
+      </div>
+      <div class="modal-body">
+        <p id="confirm-message" style="margin: 0;"></p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" type="button" id="confirm-cancel">取消</button>
+        <button class="btn btn-primary" type="button" id="confirm-ok">确定</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../js/common.js"></script>
+  <script src="../js/courses.js"></script>
+</body>
+</html>

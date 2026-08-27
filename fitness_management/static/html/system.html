@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>系统配置 - 健身管理系统</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-page="system">
+  <div class="app-layout">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <span class="brand-mark">健</span>
+        <div>
+          <div class="brand-name">健身管理系统</div>
+          <div class="brand-sub">运营后台</div>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-section">
+          <div class="nav-section-title">运营管理</div>
+          <a class="nav-link" data-page="dashboard" href="index.html">数据大盘</a>
+          <a class="nav-link" data-page="members" href="members.html">会员管理</a>
+          <a class="nav-link" data-page="coaches" href="coaches.html">教练管理</a>
+          <a class="nav-link" data-page="courses" href="courses.html">课程与预约</a>
+          <a class="nav-link" data-page="equipment" href="equipment.html">器材管理</a>
+          <a class="nav-link" data-page="system" href="system.html">系统配置</a>
+        </div>
+        <div class="nav-section">
+          <div class="nav-section-title">业务入口</div>
+          <a class="nav-link" href="reception.html">前台运营工作台</a>
+          <a class="nav-link" href="member_center.html">会员个人中心</a>
+          <a class="nav-link" href="coach_panel.html">教练工作台</a>
+        </div>
+      </nav>
+      <div class="sidebar-footer">
+        <div>当前日期：<span data-current-date></span></div>
+        <div>© <span data-current-year></span> 健身管理系统</div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="icon-btn mobile-menu-btn" id="mobile-menu-btn" type="button" aria-label="打开菜单">☰</button>
+          <div class="topbar-title">系统配置</div>
+        </div>
+        <div class="topbar-right">
+          <div class="user-chip">
+            <span class="user-avatar">管</span>
+            <span>超级管理员</span>
+          </div>
+          <button class="btn btn-secondary btn-sm" id="logout-btn" type="button">退出</button>
+        </div>
+      </header>
+
+      <div class="page-content">
+        <div class="page-header">
+          <div>
+            <h1>系统配置</h1>
+            <p class="page-desc">维护健身房基础信息、系统日志和字典配置。</p>
+          </div>
+        </div>
+
+        <div class="split-layout">
+          <div class="panel">
+            <div class="panel-header">
+              <h2 class="panel-title">健身房基础信息</h2>
+            </div>
+            <div class="panel-body">
+              <div class="form-grid">
+                <div class="field">
+                  <label for="gym-name">名称</label>
+                  <input id="gym-name" type="text" value="活力健身中心">
+                </div>
+                <div class="field">
+                  <label for="gym-phone">联系电话</label>
+                  <input id="gym-phone" type="text" value="0571-88886666">
+                </div>
+                <div class="field full">
+                  <label for="gym-address">地址</label>
+                  <input id="gym-address" type="text" value="杭州市西湖区健身路 88 号">
+                </div>
+                <div class="field full">
+                  <label for="gym-hours">营业时间</label>
+                  <input id="gym-hours" type="text" value="周一至周日 08:00 - 22:00">
+                </div>
+              </div>
+              <div class="page-actions" style="margin-top: 16px;">
+                <button class="btn btn-primary" type="button" id="save-system-btn">保存配置</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <h2 class="panel-title">字典配置</h2>
+            </div>
+            <div class="panel-body no-padding">
+              <div class="data-table-wrap">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>字典类型</th>
+                      <th>配置项</th>
+                      <th>状态</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr><td>运动部位</td><td>胸、背、腿、肩、核心、手臂</td><td><span class="badge success">启用</span></td></tr>
+                    <tr><td>器材分类</td><td>有氧器械、力量器械、自由重量、瑜伽普拉提、辅助器材</td><td><span class="badge success">启用</span></td></tr>
+                    <tr><td>课程分类</td><td>瑜伽、有氧操、搏击操、动感单车、力量训练</td><td><span class="badge success">启用</span></td></tr>
+                    <tr><td>卡状态</td><td>正常、过期、暂停、注销</td><td><span class="badge success">启用</span></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <h2 class="panel-title">系统日志</h2>
+          </div>
+          <div class="panel-body no-padding">
+            <div class="data-table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>时间</th>
+                    <th>类型</th>
+                    <th>操作人</th>
+                    <th>操作内容</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>2026-08-27 10:24</td>
+                    <td>操作日志</td>
+                    <td>前台小周</td>
+                    <td>会员王琳续费季卡</td>
+                  </tr>
+                  <tr>
+                    <td>2026-08-27 09:12</td>
+                    <td>操作日志</td>
+                    <td>超级管理员</td>
+                    <td>处理动感单车报修</td>
+                  </tr>
+                  <tr>
+                    <td>2026-08-27 08:36</td>
+                    <td>登录日志</td>
+                    <td>前台小周</td>
+                    <td>登录前台运营工作台</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="../js/common.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const saveBtn = document.getElementById("save-system-btn");
+      if (saveBtn) {
+        saveBtn.addEventListener("click", function () {
+          window.GymUI.toast("系统配置已保存");
+        });
+      }
+    });
+  </script>
+</body>
+</html>

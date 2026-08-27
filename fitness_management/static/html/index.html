@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>数据大盘 - 健身管理系统</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-page="dashboard">
+  <div class="app-layout">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <span class="brand-mark">健</span>
+        <div>
+          <div class="brand-name">健身管理系统</div>
+          <div class="brand-sub">运营后台</div>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-section">
+          <div class="nav-section-title">运营管理</div>
+          <a class="nav-link" data-page="dashboard" href="index.html">数据大盘</a>
+          <a class="nav-link" data-page="members" href="members.html">会员管理</a>
+          <a class="nav-link" data-page="coaches" href="coaches.html">教练管理</a>
+          <a class="nav-link" data-page="courses" href="courses.html">课程预约</a>
+          <a class="nav-link" data-page="equipment" href="equipment.html">器材管理</a>
+          <a class="nav-link" data-page="system" href="system.html">系统配置</a>
+        </div>
+        <div class="nav-section">
+          <div class="nav-section-title">业务入口</div>
+          <a class="nav-link" href="reception.html">前台运营工作台</a>
+          <a class="nav-link" href="member_center.html">会员个人中心</a>
+          <a class="nav-link" href="coach_panel.html">教练工作台</a>
+        </div>
+      </nav>
+      <div class="sidebar-footer">
+        <div>当前日期：<span data-current-date></span></div>
+        <div>© <span data-current-year></span> 健身管理系统</div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="icon-btn mobile-menu-btn" id="mobile-menu-btn" type="button" aria-label="打开菜单">☰</button>
+          <div class="topbar-title" data-dynamic-title="index">数据大盘</div>
+        </div>
+        <div class="topbar-right">
+          <div class="search-box">
+            <span>⌕</span>
+            <input type="search" placeholder="搜索会员、课程、器材">
+          </div>
+          <div class="user-chip">
+            <span class="user-avatar">管</span>
+            <span>超级管理员</span>
+          </div>
+          <button class="btn btn-secondary btn-sm" id="logout-btn" type="button">退出</button>
+        </div>
+      </header>
+
+      <div class="page-content">
+        <div class="page-header">
+          <div>
+            <h1 data-dynamic-title="index">数据大盘</h1>
+            <p class="page-desc" data-dynamic-desc="index">查看场馆核心运营指标与近期业务动态。</p>
+          </div>
+          <div class="page-actions">
+            <div class="segmented" id="date-filter">
+              <button type="button" data-period="day">今日</button>
+              <button type="button" data-period="week" class="active">本周</button>
+              <button type="button" data-period="month">本月</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="stat-grid">
+          <div class="stat-card">
+            <div class="stat-icon">人</div>
+            <div>
+              <div class="stat-card-value" id="total-members">1286</div>
+              <div class="stat-card-label">会员总数</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">增</div>
+            <div>
+              <div class="stat-card-value" id="new-members">42</div>
+              <div class="stat-card-label">本期新增会员</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon warn">过</div>
+            <div>
+              <div class="stat-card-value" id="expired-members">18</div>
+              <div class="stat-card-label">过期会员</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">收</div>
+            <div>
+              <div class="stat-card-value">¥ 86,420.00</div>
+              <div class="stat-card-label">本期营收总额</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon danger">约</div>
+            <div>
+              <div class="stat-card-value">326</div>
+              <div class="stat-card-label">课程预约量</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="chart-grid">
+          <div class="panel chart-box large">
+            <div class="panel-header">
+              <h2 class="panel-title">会员与营收趋势</h2>
+              <span class="badge info">按 <span id="period-label">本周</span> 统计</span>
+            </div>
+            <div class="panel-body no-padding">
+              <div id="trend-chart" style="height: 340px;"></div>
+            </div>
+          </div>
+          <div class="panel chart-box">
+            <div class="panel-header">
+              <h2 class="panel-title">卡种占比</h2>
+            </div>
+            <div class="panel-body no-padding">
+              <div id="card-chart" style="height: 320px;"></div>
+            </div>
+          </div>
+          <div class="panel chart-box">
+            <div class="panel-header">
+              <h2 class="panel-title">教练授课课时</h2>
+            </div>
+            <div class="panel-body no-padding">
+              <div id="coach-chart" style="height: 320px;"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="split-layout">
+          <div class="panel">
+            <div class="panel-header">
+              <h2 class="panel-title">近期预约</h2>
+              <a href="courses.html" class="btn btn-ghost btn-sm">查看全部</a>
+            </div>
+            <div class="panel-body no-padding">
+              <div class="data-table-wrap">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>会员</th>
+                      <th>课程</th>
+                      <th>时间</th>
+                      <th>状态</th>
+                    </tr>
+                  </thead>
+                  <tbody id="recent-reservations"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <h2 class="panel-title">关键操作日志</h2>
+            </div>
+            <div class="panel-body no-padding">
+              <div class="data-table-wrap">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>操作人</th>
+                      <th>操作内容</th>
+                      <th>时间</th>
+                    </tr>
+                  </thead>
+                  <tbody id="activity-log"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div class="modal-mask" id="confirm-modal">
+    <div class="modal sm">
+      <div class="modal-header">
+        <h3 class="modal-title">操作确认</h3>
+        <button class="icon-btn" type="button" data-close-modal="confirm-modal">×</button>
+      </div>
+      <div class="modal-body">
+        <p id="confirm-message" style="margin: 0;"></p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" type="button" id="confirm-cancel">取消</button>
+        <button class="btn btn-primary" type="button" id="confirm-ok">确定</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="../js/common.js"></script>
+  <script src="../js/dashboard.js"></script>
+</body>
+</html>

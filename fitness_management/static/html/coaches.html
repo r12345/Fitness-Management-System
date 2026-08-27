@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>教练管理 - 健身管理系统</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-page="coaches">
+  <div class="app-layout">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <span class="brand-mark">健</span>
+        <div>
+          <div class="brand-name">健身管理系统</div>
+          <div class="brand-sub">运营后台</div>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-section">
+          <div class="nav-section-title">运营管理</div>
+          <a class="nav-link" data-page="dashboard" href="index.html">数据大盘</a>
+          <a class="nav-link" data-page="members" href="members.html">会员管理</a>
+          <a class="nav-link" data-page="coaches" href="coaches.html">教练管理</a>
+          <a class="nav-link" data-page="courses" href="courses.html">课程预约</a>
+          <a class="nav-link" data-page="equipment" href="equipment.html">器材管理</a>
+          <a class="nav-link" data-page="system" href="system.html">系统配置</a>
+        </div>
+        <div class="nav-section">
+          <div class="nav-section-title">业务入口</div>
+          <a class="nav-link" href="reception.html">前台运营工作台</a>
+          <a class="nav-link" href="member_center.html">会员个人中心</a>
+          <a class="nav-link" href="coach_panel.html">教练工作台</a>
+        </div>
+      </nav>
+      <div class="sidebar-footer">
+        <div>当前日期：<span data-current-date></span></div>
+        <div>© <span data-current-year></span> 健身管理系统</div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="icon-btn mobile-menu-btn" id="mobile-menu-btn" type="button" aria-label="打开菜单">☰</button>
+          <div class="topbar-title">教练管理</div>
+        </div>
+        <div class="topbar-right">
+          <div class="user-chip">
+            <span class="user-avatar">管</span>
+            <span>超级管理员</span>
+          </div>
+          <button class="btn btn-secondary btn-sm" id="logout-btn" type="button">退出</button>
+        </div>
+      </header>
+
+      <div class="page-content">
+        <div class="page-header">
+          <div>
+            <h1>教练管理</h1>
+            <p class="page-desc">管理教练档案、专长排班与授课统计。</p>
+          </div>
+          <div class="page-actions">
+            <button class="btn btn-primary" type="button" id="add-coach-btn">新增教练</button>
+          </div>
+        </div>
+
+        <div class="stat-grid">
+          <div class="stat-card">
+            <div class="stat-icon">人</div>
+            <div>
+              <div class="stat-card-value">12</div>
+              <div class="stat-card-label">在职教练</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">排</div>
+            <div>
+              <div class="stat-card-value">18</div>
+              <div class="stat-card-label">今日排课</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon warn">课</div>
+            <div>
+              <div class="stat-card-value">246</div>
+              <div class="stat-card-label">本月授课课时</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">分</div>
+            <div>
+              <div class="stat-card-value">4.8</div>
+              <div class="stat-card-label">平均评分</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-body">
+            <div class="filter-bar">
+              <div class="field">
+                <label for="coach-keyword">关键词</label>
+                <input id="coach-keyword" type="search" placeholder="教练姓名或联系方式">
+              </div>
+              <div class="field">
+                <label for="coach-status-filter">状态</label>
+                <select id="coach-status-filter">
+                  <option value="">全部状态</option>
+                  <option value="在职">在职</option>
+                  <option value="休假">休假</option>
+                  <option value="离职">离职</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="coach-specialty-filter">专长</label>
+                <select id="coach-specialty-filter">
+                  <option value="">全部专长</option>
+                  <option value="增肌">增肌</option>
+                  <option value="减脂">减脂</option>
+                  <option value="瑜伽">瑜伽</option>
+                  <option value="普拉提">普拉提</option>
+                  <option value="搏击">搏击</option>
+                  <option value="康复">康复</option>
+                </select>
+              </div>
+              <div class="page-actions" style="align-self: flex-end;">
+                <button class="btn btn-primary" type="button" id="coach-search-btn">查询</button>
+                <button class="btn btn-secondary" type="button" id="coach-reset-btn">重置</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <h2 class="panel-title">教练列表</h2>
+            <span class="badge info" id="coach-count">共 0 条</span>
+          </div>
+          <div class="panel-body no-padding">
+            <div class="data-table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>姓名</th>
+                    <th>联系方式</th>
+                    <th>专长</th>
+                    <th>状态</th>
+                    <th>入职时间</th>
+                    <th>本月课时</th>
+                    <th>评分</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="coach-table-body"></tbody>
+              </table>
+            </div>
+            <div class="pagination" id="coach-pagination"></div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- 新增编辑教练弹窗 -->
+  <div class="modal-mask" id="coach-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title" id="coach-modal-title">新增教练</h3>
+        <button class="icon-btn" type="button" data-close-modal="coach-modal">×</button>
+      </div>
+      <div class="modal-body">
+        <form id="coach-form">
+          <input type="hidden" id="coach-id">
+          <div class="form-grid">
+            <div class="field">
+              <label for="coach-name">姓名</label>
+              <input id="coach-name" type="text" placeholder="请输入教练姓名" required>
+            </div>
+            <div class="field">
+              <label for="coach-phone">联系方式</label>
+              <input id="coach-phone" type="tel" placeholder="请输入手机号" required>
+            </div>
+            <div class="field full">
+              <label>专长</label>
+              <div id="specialty-checkboxes" class="filter-bar">
+                <label><input type="checkbox" value="增肌"> 增肌</label>
+                <label><input type="checkbox" value="减脂"> 减脂</label>
+                <label><input type="checkbox" value="瑜伽"> 瑜伽</label>
+                <label><input type="checkbox" value="普拉提"> 普拉提</label>
+                <label><input type="checkbox" value="搏击"> 搏击</label>
+                <label><input type="checkbox" value="康复"> 康复</label>
+              </div>
+            </div>
+            <div class="field">
+              <label for="coach-salary">月薪</label>
+              <input id="coach-salary" type="number" min="0" step="0.01" placeholder="请输入月薪">
+            </div>
+            <div class="field">
+              <label for="coach-hire-date">入职时间</label>
+              <input id="coach-hire-date" type="date">
+            </div>
+            <div class="field">
+              <label for="coach-status">状态</label>
+              <select id="coach-status">
+                <option value="在职">在职</option>
+                <option value="休假">休假</option>
+                <option value="离职">离职</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="coach-remark">备注</label>
+              <input id="coach-remark" type="text" placeholder="填写教练备注">
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" type="button" data-close-modal="coach-modal">取消</button>
+        <button class="btn btn-primary" type="button" id="save-coach-btn">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 排班弹窗 -->
+  <div class="modal-mask" id="schedule-modal">
+    <div class="modal lg">
+      <div class="modal-header">
+        <h3 class="modal-title">教练排班：<span id="schedule-coach-name"></span></h3>
+        <button class="icon-btn" type="button" data-close-modal="schedule-modal">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid" style="margin-bottom: 16px;">
+          <div class="field">
+            <label for="schedule-weekday">星期</label>
+            <select id="schedule-weekday">
+              <option value="周一">周一</option>
+              <option value="周二">周二</option>
+              <option value="周三">周三</option>
+              <option value="周四">周四</option>
+              <option value="周五">周五</option>
+              <option value="周六">周六</option>
+              <option value="周日">周日</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="schedule-start">开始时间</label>
+            <input id="schedule-start" type="time" value="09:00">
+          </div>
+          <div class="field">
+            <label for="schedule-end">结束时间</label>
+            <input id="schedule-end" type="time" value="10:00">
+          </div>
+          <div class="page-actions" style="align-self: flex-end;">
+            <button class="btn btn-primary" type="button" id="add-schedule-btn">添加时段</button>
+          </div>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>星期</th>
+              <th>开始时间</th>
+              <th>结束时间</th>
+              <th>状态</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="schedule-table-body"></tbody>
+        </table>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" type="button" data-close-modal="schedule-modal">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 授课统计弹窗 -->
+  <div class="modal-mask" id="coach-stats-modal">
+    <div class="modal lg">
+      <div class="modal-header">
+        <h3 class="modal-title">授课统计：<span id="stats-coach-name"></span></h3>
+        <button class="icon-btn" type="button" data-close-modal="coach-stats-modal">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="stat-grid three" style="margin-bottom: 16px;">
+          <div class="stat-card">
+            <div class="stat-icon">课</div>
+            <div>
+              <div class="stat-card-value" id="stats-hours">0</div>
+              <div class="stat-card-label">授课课时</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">人</div>
+            <div>
+              <div class="stat-card-value" id="stats-students">0</div>
+              <div class="stat-card-label">学员数量</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">收</div>
+            <div>
+              <div class="stat-card-value" id="stats-revenue">¥ 0</div>
+              <div class="stat-card-label">营收贡献</div>
+            </div>
+          </div>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>日期</th>
+              <th>课程</th>
+              <th>学员</th>
+              <th>课时</th>
+              <th>评分</th>
+            </tr>
+          </thead>
+          <tbody id="stats-table-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-mask" id="confirm-modal">
+    <div class="modal sm">
+      <div class="modal-header">
+        <h3 class="modal-title">操作确认</h3>
+        <button class="icon-btn" type="button" data-close-modal="confirm-modal">×</button>
+      </div>
+      <div class="modal-body">
+        <p id="confirm-message" style="margin: 0;"></p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" type="button" id="confirm-cancel">取消</button>
+        <button class="btn btn-primary" type="button" id="confirm-ok">确定</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../js/common.js"></script>
+  <script src="../js/coaches.js"></script>
+</body>
+</html>
