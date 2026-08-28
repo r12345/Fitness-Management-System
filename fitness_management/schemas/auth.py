@@ -13,4 +13,5 @@ class UserInfoRequest(BaseModel):
     role: str = Field(..., max_length=50)
     name:str = Field(..., max_length=50)
     phone: str = Field(..., max_length=50)
+    status:str = Field(..., max_length=50)
 
