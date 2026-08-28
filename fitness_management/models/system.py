@@ -14,8 +14,8 @@ class User(Base):
     role: Mapped[str] = mapped_column(String(32), nullable=False, comment="角色标识")
     name: Mapped[str] = mapped_column(String(64), nullable=False, comment="姓名")
     phone: Mapped[str] = mapped_column(String(20), nullable=False, comment="手机号")
-    status: Mapped[str] = mapped_column(String(16), nullable=False, comment="状态")
-    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False, comment="创建时间")
+    status: Mapped[str] = mapped_column(String(16), comment="状态")
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), comment="创建时间")
 
 
 class SystemConfig(Base):

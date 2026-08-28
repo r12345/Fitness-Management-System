@@ -3,7 +3,7 @@ from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from fitness_management.crud.user import check_user_exists, register_user, login_user
-from fitness_management.schemas.auth import AuthRequest
+from fitness_management.schemas.auth import AuthRequest, UserInfoRequest
 
 from .router import user_router
 from ...core.database import get_db
@@ -23,7 +23,7 @@ async def login(user_info:AuthRequest,db=Depends(get_db)):
 
 
 @user_router.post('/register')
-async def register(user_info: AuthRequest,db=Depends(get_db)):
+async def register(user_info: UserInfoRequest,db=Depends(get_db)):
     #  检查用户是否存在
     flag1=await check_user_exists(user_info.username, db)
     if flag1 is True:

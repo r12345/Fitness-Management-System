@@ -5,3 +5,12 @@ class AuthRequest(BaseModel):
     role:str
     username:str
     password:str
+
+
+class UserInfoRequest(BaseModel):
+    username: str = Field(..., max_length=50)
+    password: str = Field(..., max_length=50)
+    role: str = Field(..., max_length=50)
+    name:str = Field(..., max_length=50)
+    phone: str = Field(..., max_length=50)
+
