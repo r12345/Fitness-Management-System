@@ -64,10 +64,12 @@
 import { computed, reactive, ref } from "vue";
 import { useRouter } from "vue-router";
 import { useAuth } from "../composables/useAuth";
+import { useUserStore } from "../stores/user";
 
+import { login} from "../api/user.js";
 const router = useRouter();
 const auth = useAuth();
-
+const userStore = useUserStore();
 const roles = [
   { value: "admin", label: "超级管理员", icon: "管", desc: "全模块运营与权限管理" },
   { value: "reception", label: "前台运营", icon: "前", desc: "开卡、续费、预约与报修" },
@@ -89,24 +91,19 @@ const currentRoleTip = computed(() => {
   return current ? "当前选择：" + current.label + "，" + current.desc : "";
 });
 
-function handleLogin() {
-  if (loading.value) {
-    return;
+const handleLogin= async()=> {
+  let res = await login(form.role,form.username,form.password)
+  console.log(res)
+  if (res.code === 0) {
+    console.log('登录成功')
+    userStore.setToken(res.data.token);
+    userStore.setRole(res.data.role);
+    userStore.setRoleName(res.data.role_name);
+    router.push('/dashboard');
+  } else {
+    notice.value = res.msg;
   }
-  const username = form.username.trim();
-  const password = form.password.trim();
-  if (!username || !password) {
-    notice.value = "请输入账号和密码";
-    return;
+
   }
-  if (username !== "admin" || password !== "123456") {
-    notice.value = "账号或密码错误，请重新输入";
-    return;
-  }
-  loading.value = true;
-  auth.login(form.role, username);
-  sessionStorage.removeItem("gym_login_notice");
-  const config = auth.getRoleConfig(form.role);
-  router.replace(config.home);
-}
+
 </script>

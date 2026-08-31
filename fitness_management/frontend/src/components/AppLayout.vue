@@ -35,8 +35,7 @@
         </div>
         <div class="topbar-right">
           <div class="user-chip">
-            <span class="user-avatar">{{ currentUser.avatarText }}</span>
-            <span>{{ currentUser.username }} · {{ currentUser.roleName }}</span>
+            <span>{{ useStore.role_name }} · {{ useStore.role }}</span>
           </div>
           <button class="btn btn-secondary btn-sm" type="button" @click="handleLogout">退出</button>
         </div>
@@ -53,7 +52,8 @@
 import { computed, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useAuth } from "../composables/useAuth";
-
+import {useUserStore} from "../stores/user.js";
+const useStore=useUserStore()
 const route = useRoute();
 const router = useRouter();
 const auth = useAuth();
@@ -88,8 +88,6 @@ const MODULES = {
   ]
 };
 
-const navItems = computed(() => MODULES[auth.currentRole.value] || []);
-const currentUser = computed(() => auth.currentUser.value);
 const today = new Date().toLocaleDateString("zh-CN");
 const year = new Date().getFullYear() + "年";
 
@@ -117,7 +115,7 @@ const topbarTitle = computed(() => {
 });
 
 function handleLogout() {
-  auth.logout();
+  useStore.setToken('');
   router.replace("/login");
 }
 </script>

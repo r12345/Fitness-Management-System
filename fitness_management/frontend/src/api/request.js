@@ -1,18 +1,33 @@
-const BASE_URL = "/api";
+import axios from 'axios'
 
-export function request(path, options = {}) {
-  const token = localStorage.getItem("gym_token");
-  const headers = Object.assign({
-    "Content-Type": "application/json"
-  }, options.headers || {});
-  if (token) {
-    headers.Authorization = "Bearer " + token;
+const BASE_URL = 'http://127.0.0.1:8000/api/v1'
+
+const instance = axios.create({
+  baseURL: BASE_URL,
+  timeout: 5000
+})
+
+// 请求拦截器
+instance.interceptors.request.use(
+  (config) => {
+    // 每次请求需要带上token
+    config.headers.Authorization = localStorage.getItem('token')
+    return config
+  },
+  (error) => {
+    return Promise.reject(error)
   }
-  return fetch(BASE_URL + path, Object.assign({}, options, { headers })).then(async (response) => {
-    if (!response.ok) {
-      const text = await response.text();
-      throw new Error(text || "请求失败");
-    }
-    return response.json();
-  });
-}
+)
+
+// 响应拦截器
+instance.interceptors.response.use(
+  (response) => {
+    return response.data
+  },
+  (error) => {
+    //可以加后端数据异常传的code码进行报错提示
+    return Promise.reject(error)
+  }
+)
+
+export default instance

@@ -7,9 +7,11 @@ from fitness_management.schemas.auth import AuthRequest, UserInfoRequest
 
 from .router import user_router
 from ...core.database import get_db
+from ...core.security import create_access_token
+from ...utils.res import success_response
 
 
-@user_router.post('/login')
+@user_router.post('/login/')
 async def login(user_info:AuthRequest,db=Depends(get_db)):
     # 检查用户是否存在
     flag1 = await check_user_exists(user_info.username, db)
@@ -18,8 +20,14 @@ async def login(user_info:AuthRequest,db=Depends(get_db)):
     # 登录用户
     user = await login_user(user_info, db)
     if user is None:
-        return {"message": "用户名或密码错误"}
-    return {"message": "登录成功"}
+        return {"message": "密码错误"}
+    token = create_access_token(subject=user.id)
+    return success_response(msg='success',data={
+        'token': token,
+        'role':user.role,
+        'role_name': user.name,
+        'home':'/dashboard'
+    })
 
 
 @user_router.post('/register')
@@ -33,3 +41,5 @@ async def register(user_info: UserInfoRequest,db=Depends(get_db)):
     if user:
         return {"message": "注册成功"}
     return {"message": "注册失败"}
+
+
