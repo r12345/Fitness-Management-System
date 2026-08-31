@@ -1,17 +1,24 @@
-"""会员消费记录相关数据模型。"""
+"""消费记录数据模型。"""
 from datetime import datetime
-from sqlalchemy import String, Text, Float, DateTime, ForeignKey, func
+
+from sqlalchemy import DateTime, ForeignKey, Numeric, String, func
 from sqlalchemy.orm import Mapped, mapped_column
-from . import Base
+
+from ..core.database import Base
 
 
 class ConsumptionRecord(Base):
-    """10.3 消费记录表"""
-    __tablename__ = "consumption_record"
-    id: Mapped[int] = mapped_column(primary_key=True, comment="消费编号")
-    member_id: Mapped[int] = mapped_column(ForeignKey("member.id"), nullable=False, comment="会员")
-    item: Mapped[str] = mapped_column(String(128), nullable=False, comment="消费项目")
-    amount: Mapped[float] = mapped_column(Float, nullable=False, comment="金额")
-    pay_method: Mapped[str] = mapped_column(String(32), nullable=False, comment="支付方式")
-    operator: Mapped[str] = mapped_column(String(64), nullable=False, comment="操作人")
-    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False, comment="消费时间")
+    """会员消费/充值记录表（前台开卡、续费、私教消费等）。"""
+
+    __tablename__ = "consumption_records"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    member_id: Mapped[int] = mapped_column(
+        ForeignKey("members.id", ondelete="CASCADE"), comment="消费会员"
+    )
+    type: Mapped[str] = mapped_column(String(20), comment="类型：开卡/续费/私教/商品/充值")
+    amount: Mapped[float] = mapped_column(Numeric(10, 2), comment="金额（元）")
+    balance_after: Mapped[float | None] = mapped_column(Numeric(10, 2), default=None, comment="交易后余额")
+    operator: Mapped[str | None] = mapped_column(String(50), default=None, comment="操作人，如 前台小周")
+    remark: Mapped[str | None] = mapped_column(String(255), default=None, comment="备注，如 续费季卡")
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), comment="交易时间")
