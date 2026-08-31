@@ -89,24 +89,16 @@ const router = createRouter({
   history: createWebHistory(),
   routes
 });
-
-router.beforeEach((to) => {
-  const auth = useAuth();
-  if (to.meta.public) {
-    if (auth.isLogin.value) {
-      const config = auth.getRoleConfig(auth.currentRole.value);
-      return config ? config.home : "/login";
+// 白名单
+const whiteList = ['/login','/register']
+// 全局守卫路由
+router.beforeEach((to, from) => {
+  if (!whiteList.includes(to.path)) {
+    if (!localStorage.getItem('token')) {
+      return '/login'
     }
-    return true;
   }
-  if (!auth.isLogin.value) {
-    return { path: "/login", query: { redirect: to.fullPath } };
-  }
-  if (to.meta.roles && to.meta.roles.indexOf(auth.currentRole.value) < 0) {
-    const config = auth.getRoleConfig(auth.currentRole.value);
-    return config ? config.home : "/login";
-  }
-  return true;
-});
+})
+
 
 export default router;

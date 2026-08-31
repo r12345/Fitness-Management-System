@@ -1,32 +1,44 @@
 """SQLAlchemy 数据库连接与会话管理。"""
-import os
+from sqlalchemy.ext.asyncio import create_async_engine
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import declarative_base, sessionmaker
+# 创建异步引擎
+from sqlalchemy.ext.asyncio import create_async_engine
+from fastapi import Depends
+from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
 
-# 默认连接本地 MySQL 8.0（utf8mb4），也可通过环境变量覆盖，例如临时切回 SQLite：
-# DATABASE_URL=sqlite:///./fitness.db
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "mysql+pymysql://root:root@localhost:3306/fitness?charset=utf8mb4",
+# 假设使用 asyncpg 作为 PostgreSQL 的异步驱动
+DATABASE_URL = "mysql+aiomysql://root:root@localhost/fitness_management?charset=utf8mb4"
+
+async_engine = create_async_engine(
+    DATABASE_URL,
+    echo=True,  # 打印SQL语句，便于调试
+    pool_size=5, # 连接池大小
+    max_overflow=10 # 超过连接池大小外可创建的最大连接数
 )
 
-if DATABASE_URL.startswith("sqlite"):
-    engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
-else:
-    engine = create_engine(DATABASE_URL, pool_pre_ping=True, pool_recycle=3600)
 
-# 会话工厂：autocommit/autoflush 关闭，保证事务手动提交
-SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
+# 创建异步会话工厂
 
-# 所有 ORM 模型的基类
-Base = declarative_base()
+# 创建异步会话工厂
+AsyncSessionLocal = async_sessionmaker(
+    bind=async_engine,
+    class_=AsyncSession,
+    expire_on_commit=False # 提交后对象属性不过期，避免异步环境下懒加载报错
+)
+
+# 创建数据库依赖注入
 
 
-def get_db():
-    """FastAPI 依赖：请求级数据库会话，请求结束后自动关闭。"""
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+async def get_db() -> AsyncSession:
+    """
+    获取异步数据库会话的依赖注入函数
+    """
+    async with AsyncSessionLocal() as session:
+        try:
+            yield session
+            await session.commit() # 如果没有异常发生，自动提交事务
+        except Exception:
+            await session.rollback() # 发生异常时回滚事务
+            raise
+        finally:
+            await session.close() # 确保最终关闭会话
