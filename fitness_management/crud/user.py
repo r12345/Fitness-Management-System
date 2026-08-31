@@ -49,7 +49,7 @@ async def login_user(user_info:AuthRequest,db:AsyncSession):
     result = await db.execute(query)
     user = result.scalar_one_or_none()
     # 如果存在，检查密码是否正确
-    if user and verify_password(user_info.password, user.password_hash):
+    if user and verify_password(user_info.password, user.password_hash) and user.role == user_info.role:
         # 如果密码正确，返回用户信息
         return user
     # 如果用户不存在或密码不正确，返回错误信息
