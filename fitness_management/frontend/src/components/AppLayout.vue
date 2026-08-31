@@ -58,7 +58,7 @@ const route = useRoute();
 const router = useRouter();
 const auth = useAuth();
 const menuOpen = ref(false);
-
+const navItems = computed(() => MODULES[useStore.role]);
 const MODULES = {
   admin: [
     { path: "/dashboard", label: "数据大盘" },
@@ -107,7 +107,7 @@ const ROLE_PAGE_TITLES = {
 };
 
 const topbarTitle = computed(() => {
-  const titles = ROLE_PAGE_TITLES[auth.currentRole.value];
+  const titles = ROLE_PAGE_TITLES[useStore.role];
   if (titles && titles[route.path]) {
     return titles[route.path];
   }
