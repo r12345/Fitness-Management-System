@@ -1,4 +1,6 @@
 """会员管理与消费记录接口。"""
+from decimal import Decimal
+
 from fastapi import Depends
 
 from fitness_management.api.v1.router import members_router
@@ -33,6 +35,7 @@ async def destroy_member(id:int,db=Depends(get_db)):
 
 @members_router.put("/{id}/renew")
 async def create_card(member_id:int,renew:float,db=Depends(get_db)):
+    renew = Decimal(str(renew))
     flag = await renew_card(member_id, renew, db)
     if flag:
         return success_response(msg='续卡成功')

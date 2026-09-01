@@ -63,11 +63,11 @@
                 <td>{{ item.id }}</td>
                 <td>{{ item.name }}</td>
                 <td>{{ item.phone }}</td>
-                <td>{{ item.gender }}</td>
-                <td>{{ item.age }}</td>
+                <td>{{ item.gender ?? '男' }}</td>
+                <td>{{ item.age ?? 0 }}</td>
                 <td>{{ item.card_type }}</td>
                 <td>{{ item.card_expire }}</td>
-                <td>¥ {{ item.balance.toLocaleString("zh-CN") }}</td>
+                <td>¥ {{ (item.balance ??0).toLocaleString("zh-CN")}}</td>
                 <td><span class="badge" :class="statusClass(item.status)">{{ item.status }}</span></td>
                 <td>
                   <div class="page-actions">
@@ -113,7 +113,6 @@
 import { computed, reactive, ref } from "vue";
 import { useAuth } from "../composables/useAuth";
 import { useToast } from "../composables/useToast";
-import { members } from "../data/mock";
 import {addMember, deleteMember, getMemberList, renewMember} from "../api/member.js";
 import {onMounted} from "vue";
 import {useRouter} from "vue-router";

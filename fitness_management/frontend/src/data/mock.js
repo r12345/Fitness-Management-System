@@ -40,16 +40,16 @@ export const receptionData = {
   ]
 };
 
-export const members = [
-  { id: "M1001", name: "王琳", phone: "13800000001", gender: "女", age: 29, cardType: "年卡", expire: "2027-08-20", balance: 1280, status: "正常" },
-  { id: "M1002", name: "李强", phone: "13800000002", gender: "男", age: 34, cardType: "季卡", expire: "2026-11-12", balance: 680, status: "正常" },
-  { id: "M1003", name: "赵敏", phone: "13800000003", gender: "女", age: 26, cardType: "月卡", expire: "2026-09-27", balance: 320, status: "正常" },
-  { id: "M1004", name: "陈晨", phone: "13800000004", gender: "男", age: 41, cardType: "年卡", expire: "2027-03-15", balance: 2200, status: "正常" },
-  { id: "M1005", name: "孙悦", phone: "13800000005", gender: "女", age: 23, cardType: "次卡", expire: "2026-12-01", balance: 0, status: "正常" },
-  { id: "M1006", name: "刘洋", phone: "13800000006", gender: "男", age: 38, cardType: "月卡", expire: "2026-08-31", balance: 120, status: "过期" },
-  { id: "M1007", name: "周琪", phone: "13800000007", gender: "女", age: 31, cardType: "季卡", expire: "2026-12-20", balance: 860, status: "暂停" },
-  { id: "M1008", name: "王哲", phone: "13800000008", gender: "男", age: 28, cardType: "年卡", expire: "2027-06-10", balance: 1560, status: "正常" }
-];
+// export const members = [
+//   { id: "M1001", name: "王琳", phone: "13800000001", gender: "女", age: 29, cardType: "年卡", expire: "2027-08-20", balance: 1280, status: "正常" },
+//   { id: "M1002", name: "李强", phone: "13800000002", gender: "男", age: 34, cardType: "季卡", expire: "2026-11-12", balance: 680, status: "正常" },
+//   { id: "M1003", name: "赵敏", phone: "13800000003", gender: "女", age: 26, cardType: "月卡", expire: "2026-09-27", balance: 320, status: "正常" },
+//   { id: "M1004", name: "陈晨", phone: "13800000004", gender: "男", age: 41, cardType: "年卡", expire: "2027-03-15", balance: 2200, status: "正常" },
+//   { id: "M1005", name: "孙悦", phone: "13800000005", gender: "女", age: 23, cardType: "次卡", expire: "2026-12-01", balance: 0, status: "正常" },
+//   { id: "M1006", name: "刘洋", phone: "13800000006", gender: "男", age: 38, cardType: "月卡", expire: "2026-08-31", balance: 120, status: "过期" },
+//   { id: "M1007", name: "周琪", phone: "13800000007", gender: "女", age: 31, cardType: "季卡", expire: "2026-12-20", balance: 860, status: "暂停" },
+//   { id: "M1008", name: "王哲", phone: "13800000008", gender: "男", age: 28, cardType: "年卡", expire: "2027-06-10", balance: 1560, status: "正常" }
+// ];
 
 export const coaches = [
   { name: "张昊", phone: "13900000001", specialty: "增肌、减脂", status: "在职", hireDate: "2023-03-12", hours: 42, score: 4.9 },

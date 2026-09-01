@@ -15,7 +15,7 @@
       <div class="panel">
         <div class="panel-body">
           <div class="page-actions">
-            <span class="user-avatar" style="width: 56px; height: 56px; font-size: 22px;">{{ userName.slice(0, 1) }}</span>
+            <span class="user-avatar" style="width: 56px; height: 56px; font-size: 22px;">{{ userName.slice(0,2) }}</span>
             <div>
               <h2 style="margin: 0;">{{ userName }}</h2>
               <div class="page-desc">会员编号 M1001 · 年卡</div>
@@ -134,14 +134,17 @@
 
 <script setup>
 import { computed, reactive, ref } from "vue";
-import { useAuth } from "../composables/useAuth";
+// import { useAuth } from "../composables/useAuth";
 import { useToast } from "../composables/useToast";
 import { memberAppointments, trainingRecords } from "../data/mock";
 import TrendChart from "../components/TrendChart.vue";
+import {useUserStore} from "../stores/user.js";
+const useStore = useUserStore();
 
-const auth = useAuth();
+// const auth = useAuth();
 const toast = useToast();
-const userName = auth.currentUser.value.username || "王琳";
+// const userName = auth.currentUser.value.username || "王琳";
+const userName = useStore.role_name;
 const activeTab = ref("appointments");
 const tabs = [
   { key: "appointments", label: "我的预约" },
