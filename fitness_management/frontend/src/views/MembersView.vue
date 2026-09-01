@@ -63,11 +63,11 @@
                 <td>{{ item.id }}</td>
                 <td>{{ item.name }}</td>
                 <td>{{ item.phone }}</td>
-                <td>{{ item.gender }}</td>
-                <td>{{ item.age }}</td>
-                <td>{{ item.cardType }}</td>
-                <td>{{ item.expire }}</td>
-                <td>¥ {{ item.balance.toLocaleString("zh-CN") }}</td>
+                <td>{{ item.gender ?? '男' }}</td>
+                <td>{{ item.age ?? 0 }}</td>
+                <td>{{ item.card_type }}</td>
+                <td>{{ item.card_expire }}</td>
+                <td>¥ {{ (item.balance ??0).toLocaleString("zh-CN")}}</td>
                 <td><span class="badge" :class="statusClass(item.status)">{{ item.status }}</span></td>
                 <td>
                   <div class="page-actions">
@@ -94,8 +94,8 @@
             <div class="field"><label>手机号</label><input v-model="form.phone" type="text"></div>
             <div class="field"><label>性别</label><select v-model="form.gender"><option>男</option><option>女</option></select></div>
             <div class="field"><label>年龄</label><input v-model="form.age" type="number"></div>
-            <div class="field"><label>办卡类型</label><select v-model="form.cardType"><option>月卡</option><option>季卡</option><option>年卡</option><option>次卡</option></select></div>
-            <div class="field"><label>到期时间</label><input v-model="form.expire" type="date"></div>
+            <div class="field"><label>办卡类型</label><select v-model="form.card_type"><option>月卡</option><option>季卡</option><option>年卡</option><option>次卡</option></select></div>
+            <div class="field"><label>到期时间</label><input v-model="form.card_expire" type="date"></div>
             <div class="field"><label>余额</label><input v-model="form.balance" type="number"></div>
             <div class="field"><label>状态</label><select v-model="form.status"><option>正常</option><option>过期</option><option>暂停</option></select></div>
           </div>
@@ -113,36 +113,50 @@
 import { computed, reactive, ref } from "vue";
 import { useAuth } from "../composables/useAuth";
 import { useToast } from "../composables/useToast";
-import { members } from "../data/mock";
+import {addMember, deleteMember, getMemberList, renewMember} from "../api/member.js";
+import {onMounted} from "vue";
+import {useRouter} from "vue-router";
+const router = useRouter();
 
 const auth = useAuth();
 const toast = useToast();
-const list = ref(members.map((item) => ({ ...item })));
+const list = ref([]);
 const keyword = ref("");
 const statusFilter = ref("");
 const cardTypeFilter = ref("");
 const showModal = ref(false);
 const form = reactive({
   name: "",
+  gender: "",
   phone: "",
-  gender: "男",
   age: 25,
-  cardType: "月卡",
-  expire: "",
+  card_type: "月卡",
+  card_start: "",
+  card_expire: "",
   balance: 0,
-  status: "正常"
+  status: "正常",
+  remark:''
 });
-
+const c_renew = ref({
+  member_id:'',
+  renew:0
+})
+form.card_start=String(Number(form.card_expire))
 const isReception = computed(() => auth.currentRole.value === "reception");
 
 const filteredMembers = computed(() => {
   return list.value.filter((item) => {
     const matchKeyword = !keyword.value || item.name.includes(keyword.value) || item.phone.includes(keyword.value);
     const matchStatus = !statusFilter.value || item.status === statusFilter.value;
-    const matchCard = !cardTypeFilter.value || item.cardType === cardTypeFilter.value;
+    const matchCard = !cardTypeFilter.value || item.card_type === cardTypeFilter.value;
     return matchKeyword && matchStatus && matchCard;
   });
 });
+onMounted(async () => {
+  let res = await getMemberList();
+  list.value=res.data
+  console.log(list.value)
+})
 
 function statusClass(status) {
   if (status === "正常") return "success";
@@ -154,23 +168,35 @@ function openAdd() {
   showModal.value = true;
 }
 
-function saveMember() {
-  list.value.unshift({
-    id: "M" + String(Date.now()).slice(-6),
-    ...form
-  });
+async function saveMember() {
+  let res = await addMember(form);
+  console.log(res)
   showModal.value = false;
   toast.show("会员已创建");
+  let res2 = await getMemberList();
+  list.value=res2.data
 }
 
-function renew(item) {
-  item.status = "正常";
-  item.balance += 500;
+async function renew(item) {
+  c_renew.id=item.id
+  c_renew.renew+=100
+  let res = await renewMember(c_renew.id);
+  if (res.code===0){
+    console.log(res)
   toast.show(item.name + " 续费成功");
+  }else{
+    toast.show(item.name + " 续费失败");
+  }
+  let res2 = await getMemberList();
+  list.value=res2.data
+
 }
 
-function removeMember(item) {
-  list.value = list.value.filter((target) => target.id !== item.id);
+async function removeMember(item) {
+  let res = await deleteMember(item.id);
+  console.log(res)
   toast.show("会员已删除");
+  let res2 = await getMemberList();
+  list.value=res2.data
 }
 </script>

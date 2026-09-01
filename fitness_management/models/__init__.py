@@ -1,28 +1,25 @@
-"""SQLAlchemy 数据模型汇总。
+"""SQLAlchemy 数据模型汇总。"""
 
-导入本包即可将所有模型注册到 Base.metadata，供 create_all 建表使用。
-"""
-from .appointment import Appointment
-from .coach import Coach
-from .consumption import ConsumptionRecord
-from .course import Course, CourseSchedule
-from .equipment import Equipment, EquipmentRepair
+from sqlalchemy.ext.asyncio import AsyncAttrs
+
+from sqlalchemy.orm import DeclarativeBase
+
+
+class Base(AsyncAttrs, DeclarativeBase):
+    """异步SQLAlchemy基类，所有模型继承"""
+    pass
+
+# 后面各个模型要在这里import，给alembic迁移识别
+from .system import User, SystemConfig, SystemLog, DictItem
 from .member import Member
-from .system import SysConfig, SysOperLog, SysUser
-from .training import TrainingPlan, TrainingRecord
+from .consumption import ConsumeRecord
+from .coach import Coach, Schedule
+from .course import Course
+from .appointment import Appointment
+from .training import TrainPlan,CheckinRecord
+from .equipment import Equipment,Repair,MaintenanceRecord
+from .reception import Reception
 
-__all__ = [
-    "Member",
-    "Coach",
-    "Course",
-    "CourseSchedule",
-    "Appointment",
-    "Equipment",
-    "EquipmentRepair",
-    "TrainingRecord",
-    "TrainingPlan",
-    "ConsumptionRecord",
-    "SysUser",
-    "SysConfig",
-    "SysOperLog",
-]
+
+
+

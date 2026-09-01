@@ -101,7 +101,7 @@ const handleLogin= async()=> {
     userStore.setRoleName(res.data.role_name);
     router.push('/dashboard');
   } else {
-    notice.value = res.msg;
+    notice.value = res.message;
   }
 
   }

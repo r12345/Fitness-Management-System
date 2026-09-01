@@ -3,12 +3,14 @@ import uvicorn
 from fastapi import FastAPI
 from core.database import async_engine
 import models  # 导入您的models模块，确保模型类被注册到Base的metadata中
-from fitness_management.api.v1.router import user_router
+from fitness_management.api.v1.router import user_router, members_router, member_center_router
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
 app.include_router(user_router)
+app.include_router(members_router)
+app.include_router(member_center_router)
 
 
 app.add_middleware(
@@ -28,4 +30,4 @@ app.add_middleware(
 #     await create_tables()
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    uvicorn.run(app, host="127.0.0.1", port=8001)
