@@ -9,13 +9,13 @@ from fitness_management.models import User
 from fitness_management.utils.res import success_response
 
 
-@member_center_router.get('/member_center/{id}')
-async def member_center(user:User=Depends(get_current_user),db=Depends(get_db)):
-    member = await get_member_info_by_id(user.member,db)
+@member_center_router.get('/')
+async def member_center(user: User = Depends(get_current_user),db=Depends(get_db)):
+    member = await get_member_info_by_id(user.id,db)
     if member:
         return success_response(data=member)
     else:
-        return success_response(data=None)
+        return success_response(msg='失败',data=None)
 
 
 @member_center_router.post('/member_center/{id}')

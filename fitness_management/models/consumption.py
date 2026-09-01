@@ -2,7 +2,7 @@
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import ForeignKey, String
+from sqlalchemy import ForeignKey, String,DECIMAL
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from . import Base
@@ -15,7 +15,7 @@ class ConsumeRecord(Base):
         ForeignKey("member.id", ondelete="CASCADE"), comment="会员"
     )
     item: Mapped[str] = mapped_column(String(64),comment="消费项目")
-    amount: Mapped[Decimal] = mapped_column(String(64),comment="金额")
+    amount: Mapped[Decimal] = mapped_column(DECIMAL(10,2),comment="金额")
     pay_method: Mapped[str] = mapped_column(String(64),comment="支付方式")
     operator: Mapped[str] = mapped_column(String(64),comment="操作人")
     created_at: Mapped[datetime] = mapped_column(comment="消费时间")

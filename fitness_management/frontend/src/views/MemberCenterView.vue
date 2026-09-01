@@ -15,17 +15,17 @@
       <div class="panel">
         <div class="panel-body">
           <div class="page-actions">
-            <span class="user-avatar" style="width: 56px; height: 56px; font-size: 22px;">{{ userName.slice(0,2) }}</span>
+            <span class="user-avatar" style="width: 56px; height: 56px; font-size: 22px;">{{ shortName }}</span>
             <div>
-              <h2 style="margin: 0;">{{ userName }}</h2>
+              <h2 style="margin: 0;">{{ member_info.name }}</h2>
               <div class="page-desc">会员编号 M1001 · 年卡</div>
             </div>
           </div>
         </div>
         <div class="panel-body" style="border-top: 1px solid var(--border);">
           <div class="stat-grid" style="grid-template-columns: 1fr; margin-bottom: 0;">
-            <div class="stat-card"><div><div class="stat-card-value">2027-08-20</div><div class="stat-card-label">到期时间</div></div></div>
-            <div class="stat-card"><div><div class="stat-card-value">¥ 1,280.00</div><div class="stat-card-label">账户余额</div></div></div>
+            <div class="stat-card"><div><div class="stat-card-value">{{ member_info.card_expire}}</div><div class="stat-card-label">到期时间</div></div></div>
+            <div class="stat-card"><div><div class="stat-card-value">{{ member_info.balance }}</div><div class="stat-card-label">账户余额</div></div></div>
           </div>
         </div>
       </div>
@@ -134,17 +134,17 @@
 
 <script setup>
 import { computed, reactive, ref } from "vue";
-// import { useAuth } from "../composables/useAuth";
 import { useToast } from "../composables/useToast";
 import { memberAppointments, trainingRecords } from "../data/mock";
 import TrendChart from "../components/TrendChart.vue";
-import {useUserStore} from "../stores/user.js";
-const useStore = useUserStore();
+import {getMemberById } from "../api/member_center.js";
+import { onMounted} from  "vue";
+const member_info = ref({
 
+});
 // const auth = useAuth();
 const toast = useToast();
-// const userName = auth.currentUser.value.username || "王琳";
-const userName = useStore.role_name;
+const userName =  "王琳";
 const activeTab = ref("appointments");
 const tabs = [
   { key: "appointments", label: "我的预约" },
@@ -176,6 +176,18 @@ const profile = reactive({
 const trainingSeries = computed(() => [
   { name: "训练次数", data: [2, 3, 4, 3], area: true }
 ]);
+const shortName = computed(() => {
+  const name = member_info.value?.name
+  return name ? name.slice(0,2) : ''
+})
+
+
+
+onMounted(async ()=>{
+  const res = await getMemberById();
+  member_info.value = res.data;
+  console.log(res.data)
+})
 
 function cancel(index) {
   appointments.value[index].status = "已取消";
