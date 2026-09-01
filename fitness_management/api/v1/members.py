@@ -5,13 +5,15 @@ from fastapi import Depends
 
 from fitness_management.api.v1.router import members_router
 from fitness_management.core.database import get_db
+from fitness_management.core.security import get_current_user
 from fitness_management.crud.member import show_all_members, add_member, delete_member, renew_card
+from fitness_management.models import User
 from fitness_management.schemas.member import MemberRequest
 from fitness_management.utils.res import success_response
 
 
 @members_router.post("/")
-async def create_member(member:MemberRequest,db=Depends(get_db)):
+async def create_member(member:MemberRequest,db=Depends(get_db),user:User=Depends(get_current_user)):
     member = await add_member(member, db)
     if member:
         return success_response()
@@ -20,21 +22,21 @@ async def create_member(member:MemberRequest,db=Depends(get_db)):
 
 
 @members_router.get("/")
-async def get_members(db=Depends(get_db)):
+async def get_members(db=Depends(get_db),user:User=Depends(get_current_user)):
     members = await show_all_members(db)
     return success_response(data=members)
 
 
 
 @members_router.delete("/{id}")
-async def destroy_member(id:int,db=Depends(get_db)):
+async def destroy_member(id:int,db=Depends(get_db),user:User=Depends(get_current_user)):
     flag=await delete_member(id,db)
     if flag:
         return success_response(msg='删除成功')
     return {"message":"删除失败"}
 
 @members_router.put("/{id}/renew")
-async def create_card(member_id:int,renew:float,db=Depends(get_db)):
+async def create_card(member_id:int,renew:float,db=Depends(get_db),user:User=Depends(get_current_user)):
     renew = Decimal(str(renew))
     flag = await renew_card(member_id, renew, db)
     if flag:

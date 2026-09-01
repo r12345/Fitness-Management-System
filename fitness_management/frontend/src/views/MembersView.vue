@@ -179,8 +179,8 @@ async function saveMember() {
 
 async function renew(item) {
   c_renew.id=item.id
-  c_renew.renew=100
-  let res = await renewMember(c_renew);
+  c_renew.renew+=100
+  let res = await renewMember(c_renew.id);
   if (res.code===0){
     console.log(res)
   toast.show(item.name + " 续费成功");

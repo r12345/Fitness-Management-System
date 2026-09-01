@@ -21,7 +21,7 @@ async def login(user_info:AuthRequest,db=Depends(get_db)):
     user = await login_user(user_info, db)
     if user is None:
         return {"message": "密码错误或身份错误"}
-    token = create_access_token(subject=user.id)
+    token = create_access_token(subject=str(user.id))
     return success_response(msg='success',data={
         'token': token,
         'role':user.role,

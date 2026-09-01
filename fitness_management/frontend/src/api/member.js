@@ -2,7 +2,8 @@ import request from './request'
 export function getMemberList() {
     return request({
         url: '/members/',
-        method: 'get'
+        method: 'get',
+
     })
 }
 export function addMember(formData) {
