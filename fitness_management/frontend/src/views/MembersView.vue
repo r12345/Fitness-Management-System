@@ -47,7 +47,7 @@
     <div class="panel">
       <div class="panel-header">
         <h2 class="panel-title">会员列表</h2>
-        <span class="badge info">共 {{ filteredMembers.length }} 条</span>
+        <span class="badge info">共 {{ total }} 条</span>
       </div>
       <div class="panel-body no-padding">
         <div class="data-table-wrap">
@@ -59,7 +59,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="item in filteredMembers" :key="item.id">
+              <tr v-for="item in pageData" :key="item.id">
                 <td>{{ item.id }}</td>
                 <td>{{ item.name }}</td>
                 <td>{{ item.phone }}</td>
@@ -78,7 +78,17 @@
               </tr>
             </tbody>
           </table>
+
         </div>
+        <el-pagination
+            v-model:current-page="currentPage"
+          v-model:page-size="pageSize"
+                  size="large"
+                  background
+                  layout="prev, pager, next"
+                  :total="total"
+                  class="mt-4"
+                />
       </div>
     </div>
 
@@ -104,6 +114,7 @@
           <button class="btn btn-secondary" type="button" @click="showModal = false">取消</button>
           <button class="btn btn-primary" type="button" @click="saveMember">保存</button>
         </div>
+
       </div>
     </div>
   </div>
@@ -112,6 +123,8 @@
 <script setup>
 import { computed, reactive, ref } from "vue";
 import { useAuth } from "../composables/useAuth";
+import { ElPagination } from 'element-plus'
+
 import { useToast } from "../composables/useToast";
 import {addMember, deleteMember, getMemberList, renewMember} from "../api/member.js";
 import {onMounted} from "vue";
@@ -125,6 +138,32 @@ const keyword = ref("");
 const statusFilter = ref("");
 const cardTypeFilter = ref("");
 const showModal = ref(false);
+// 分页状态
+const currentPage = ref(1)   // 当前页
+const pageSize = ref(5)     // 每页条数
+const total = ref(0)        // 总数据条数
+
+// 你的全部原始数据
+
+// 计算属性：截取当前页要展示的数据
+const pageData = computed(() => {
+  // 1.先过滤全部原始数据
+  const filtered = list.value.filter((item) => {
+    const matchKeyword = !keyword.value || item.name.includes(keyword.value) || item.phone.includes(keyword.value);
+    const matchStatus = !statusFilter.value || item.status === statusFilter.value;
+    const matchCard = !cardTypeFilter.value || item.card_type === cardTypeFilter.value;
+    return matchKeyword && matchStatus && matchCard;
+  })
+
+  // 2.把过滤后的数组长度赋值给total（分页组件总条数）
+  total.value = filtered.value?.length ?? filtered.length
+
+  // 3.对过滤完的数组做切片分页
+  const start = (currentPage.value - 1) * pageSize.value
+  const end = start + pageSize.value
+  return filtered.slice(start, end)
+})
+
 const form = reactive({
   name: "",
   gender: "",
@@ -144,18 +183,11 @@ const c_renew = ref({
 form.card_start=String(Number(form.card_expire))
 const isReception = computed(() => auth.currentRole.value === "reception");
 
-const filteredMembers = computed(() => {
-  return list.value.filter((item) => {
-    const matchKeyword = !keyword.value || item.name.includes(keyword.value) || item.phone.includes(keyword.value);
-    const matchStatus = !statusFilter.value || item.status === statusFilter.value;
-    const matchCard = !cardTypeFilter.value || item.card_type === cardTypeFilter.value;
-    return matchKeyword && matchStatus && matchCard;
-  });
-});
+
 onMounted(async () => {
   let res = await getMemberList();
   list.value=res.data
-  console.log(list.value)
+  console.log(list.value.length)
 })
 
 function statusClass(status) {
@@ -179,8 +211,8 @@ async function saveMember() {
 
 async function renew(item) {
   c_renew.id=item.id
-  c_renew.renew+=100
-  let res = await renewMember(c_renew.id);
+  c_renew.renew=100
+  let res = await renewMember(c_renew);
   if (res.code===0){
     console.log(res)
   toast.show(item.name + " 续费成功");
@@ -200,3 +232,6 @@ async function removeMember(item) {
   list.value=res2.data
 }
 </script>
+<style scoped>
+
+</style>

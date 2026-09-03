@@ -27,7 +27,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="item in coaches" :key="item.name">
+              <tr v-for="item in pageDate" :key="item.name">
                 <td>{{ item.name }}</td>
                 <td>{{ item.phone }}</td>
                 <td>{{ item.specialty }}</td>
@@ -40,6 +40,15 @@
           </table>
         </div>
       </div>
+       <el-pagination
+           v-model:current-page="currentPage",
+           v-model:page-size="pageSize"
+    size="small"
+    background
+    layout="prev, pager, next"
+    :total="total"
+    class="mt-4"
+  />
     </div>
   </div>
 </template>
@@ -47,4 +56,22 @@
 <script setup>
 import { coaches } from "../data/mock";
 import StatCard from "../components/StatCard.vue";
+import { ElPagination } from 'element-plus'
+import {computed} from "vue";
+import {ref} from "vue";
+import {onMounted} from "vue";
+
+const list = ref(coaches)
+const currentPage = ref(1)
+const pageSize = ref(3)
+const total =ref(0)
+const pageDate = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value
+  const end = start + pageSize.value
+  return list.value.slice(start, end)
+})
+onMounted(() => {
+  total.value = list.value.length
+})
+
 </script>

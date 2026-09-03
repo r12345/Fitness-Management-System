@@ -86,7 +86,6 @@ async def list_courses(
 async def create_course(
     data: CourseCreate,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
 ):
     # 校验教练存在
     from fitness_management.models.coach import Coach

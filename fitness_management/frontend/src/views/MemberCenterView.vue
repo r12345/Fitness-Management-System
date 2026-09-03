@@ -137,7 +137,7 @@ import { computed, reactive, ref } from "vue";
 import { useToast } from "../composables/useToast";
 import { memberAppointments, trainingRecords } from "../data/mock";
 import TrendChart from "../components/TrendChart.vue";
-import {getMemberById } from "../api/member_center.js";
+// import {getMemberById } from "../api/member_center.js";
 import { onMounted} from  "vue";
 const member_info = ref({
 

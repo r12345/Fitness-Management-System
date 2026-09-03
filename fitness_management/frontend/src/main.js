@@ -6,7 +6,7 @@ import router from './router'
 import "./assets/main.css";
 const app = createApp(App)
 const pinia = createPinia()
-
+import 'element-plus/dist/index.css'
 pinia.use(piniaPluginPersistedstate)
 app.use(pinia)
 app.use(router)
