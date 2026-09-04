@@ -3,6 +3,8 @@ from fastapi import Depends, HTTPException
 from typing import Optional
 
 from ...core.database import get_db
+from ...core.security import get_current_user
+from ...models import User
 from ...schemas.coach import CoachPageResponse, CoachCreate, CoachUpdate
 from ...crud.coach import get_coach_page_list, create_coach_obj, update_coach_obj, delete_coach_obj, \
     get_coach_statistics_obj
@@ -16,7 +18,8 @@ async def list_coaches(
     specialty: Optional[str] = None,
     page: int = 1,
     page_size: int = 10,
-    db = Depends(get_db)
+    db = Depends(get_db),
+    user:User=Depends(get_current_user)
 ):
     """教练分页列表 管理员接口"""
     page_data = await get_coach_page_list(
@@ -34,13 +37,13 @@ async def list_coaches(
     }
 
 @coaches_router.post("/")
-async def create_coach(coach: CoachCreate, db = Depends(get_db)):
+async def create_coach(coach: CoachCreate, db = Depends(get_db),user:User=Depends(get_current_user)):
     """创建教练 管理员接口"""
     coach = await create_coach_obj(db, coach)
     return {"code": 200, "msg": "创建成功", "data": coach}
 
 @coaches_router.put("/{coach_id}")
-async def update_coach(coach_id: int, coach: CoachUpdate, db = Depends(get_db)):
+async def update_coach(coach_id: int, coach: CoachUpdate, db = Depends(get_db),user:User=Depends(get_current_user)):
     """更新教练 管理员接口"""
     coach = await update_coach_obj(db, coach_id, coach)
     if coach is None:
@@ -49,7 +52,7 @@ async def update_coach(coach_id: int, coach: CoachUpdate, db = Depends(get_db)):
 
 
 @coaches_router.delete("/{coach_id}")
-async def delete_coach(coach_id: int, db = Depends(get_db)):
+async def delete_coach(coach_id: int, db = Depends(get_db),user:User=Depends(get_current_user)):
     """删除教练 管理员接口"""
     coach = await delete_coach_obj(db, coach_id)
     if coach is None:
@@ -57,7 +60,7 @@ async def delete_coach(coach_id: int, db = Depends(get_db)):
     return {"code": 200, "msg": "删除成功", "data": coach}
 
 @coaches_router.get("/{coach_id}/statistics")
-async def get_coach_statistics(coach_id: int, db = Depends(get_db)):
+async def get_coach_statistics(coach_id: int, db = Depends(get_db),user:User=Depends(get_current_user)):
     """获取教练统计 管理员接口"""
     coach = await get_coach_statistics_obj(db, coach_id)
     if coach is None:

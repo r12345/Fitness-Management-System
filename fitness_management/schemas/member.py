@@ -20,7 +20,7 @@ class MemberRequest(BaseModel):
 
 class RenewMember(BaseModel):
     months: int
-    amount: decimal.Decimal
+    amount: float
     remark: str
     card_type:str
     pay_method: str

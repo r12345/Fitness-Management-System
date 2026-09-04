@@ -7,7 +7,7 @@ from fastapi import Depends
 from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
 
 # 假设使用 asyncpg 作为 PostgreSQL 的异步驱动
-DATABASE_URL = "mysql+aiomysql://root:123456@localhost/fitness_management?charset=utf8mb4"
+DATABASE_URL = "mysql+aiomysql://root:root@localhost/fitness_management?charset=utf8mb4"
 
 async_engine = create_async_engine(
     DATABASE_URL,

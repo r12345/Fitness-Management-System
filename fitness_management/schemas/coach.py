@@ -11,6 +11,8 @@ class CoachItem(BaseModel):
     specialties: List[str]
     status: Optional[str]
     hire_date: Optional[date]
+    hours: Optional[int]
+    score:Optional[float]
     class Config:
         from_attributes = True
 
@@ -45,7 +47,7 @@ class CoachUpdate(BaseModel):
     specialties: Optional[str] = None
     salary: Optional[float] = None
     hire_date: Optional[str] = None
-    status: Optional[int] = None
+    status: Optional[str] = None
 
 
 # 教练授课统计返回模型

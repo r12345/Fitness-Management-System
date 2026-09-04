@@ -102,10 +102,24 @@
           <div class="form-grid">
             <div class="field full"><label>课程名称</label><input v-model="courseForm.name" type="text"></div>
             <div class="field"><label>授课教练ID</label><input v-model.number="courseForm.coach_id" type="number"></div>
-            <div class="field"><label>课程分类</label><input v-model="courseForm.category" type="text"></div>
+            <div class="field"><label>课程分类</label>
+              <select v-model="courseForm.category">
+                <option value="瑜伽">瑜伽</option>
+                <option value="搏击">搏击</option>
+                <option value="搏击">普拉提</option>
+                <option value="搏击">力量训练</option>
+                <option value="搏击">有氧</option>
+                <option value="搏击">综合体能</option>
+                <option value="搏击">康复</option>
+                <option value="搏击">球类体能</option>
+                <option value="搏击">少儿</option>
+              </select></div>
             <div class="field"><label>时长(分钟)</label><input v-model.number="courseForm.duration" type="number"></div>
             <div class="field"><label>价格</label><input v-model.number="courseForm.price" type="number"></div>
-            <div class="field"><label>课程类型(group团课/private私教)</label><input v-model="courseForm.course_type" type="text"></div>
+            <div class="field"><label>课程类型</label><select v-model="courseForm.course_type">
+              <option value="group">group 团课</option>
+              <option value="private">private 私教</option>
+            </select></div>
             <div class="field"><label>最大人数</label><input v-model.number="courseForm.max_count" type="number"></div>
             <div class="field">
               <label>状态</label>
