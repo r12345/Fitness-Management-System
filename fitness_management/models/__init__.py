@@ -16,7 +16,7 @@ from .consumption import ConsumeRecord
 from .coach import Coach, Schedule
 from .course import Course
 from .appointment import Appointment
-from .training import TrainPlan,CheckinRecord
+from .training import TrainPlan, CheckinRecord, ExerciseRecord
 from .equipment import Equipment,Repair,MaintenanceRecord
 from .reception import Reception
 

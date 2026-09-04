@@ -10,5 +10,9 @@ from fitness_management.api.v1 import members
 member_center_router = APIRouter(prefix='/api/v1/member_center', tags=['会员中心'])
 from fitness_management.api.v1 import member_center
 
+coaches_router = APIRouter(prefix='/api/v1/coaches', tags=['教练管理接口'])
+from fitness_management.api.v1 import coaches
+
+
 courses_router = APIRouter(prefix='/api/v1/courses', tags=['课程管理'])
 from fitness_management.api.v1 import courses

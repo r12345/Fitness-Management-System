@@ -9,8 +9,10 @@ from . import Base
 
 
 class ConsumeRecord(Base):
-    __tablename__ = "consume_record"
-    id: Mapped[int] = mapped_column(primary_key=True, comment="消费编号")
+    """会员消费记录表，对应 MySQL 的 consumption_record。"""
+
+    __tablename__ = "consumption_record"
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True, comment="消费编号")
     member_id: Mapped[int] = mapped_column(
         ForeignKey("member.id", ondelete="CASCADE"), nullable=True,comment="会员"
     )
