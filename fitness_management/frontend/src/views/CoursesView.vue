@@ -65,11 +65,14 @@
                 <td><span class="badge" :class="statusClass(item.status)">{{ item.status }}</span></td>
                 <td>
                   <div class="page-actions">
+                    <!-- ==========新增编辑按钮========== -->
+                    <button v-if="canManage" class="btn btn-secondary btn-sm" type="button" @click="openEdit(item)">编辑</button>
+
                     <button v-if="canManage" class="btn btn-secondary btn-sm" type="button" @click="toggle(item)">
                       {{ item.status === '已下架' ? '上架' : '下架' }}
                     </button>
                     <button v-if="canManage" class="btn btn-danger btn-sm" type="button" @click="remove(item)">删除</button>
-                    <button v-if="!canManage && role === 'coach'" class="btn btn-secondary btn-sm" type="button" @click="openReservation(item)">预约名单</button>
+                    <button v-if="canManage " class="btn btn-secondary btn-sm" type="button" @click="openReservation(item)">预约名单</button>
                     <button v-if="!canManage && role === 'member'" class="btn btn-primary btn-sm" type="button" @click="book(item)">预约</button>
                   </div>
                 </td>
@@ -88,22 +91,24 @@
       </div>
     </div>
 
+    <!-- =========新增/编辑共用弹窗 isEdit区分模式========== -->
     <div v-if="showAdd" class="modal-mask" @click.self="showAdd = false">
       <div class="modal">
         <div class="modal-header">
-          <h3 class="panel-title">新增课程</h3>
+          <h3 class="panel-title">{{ isEdit ? '编辑课程' : '新增课程' }}</h3>
           <button class="btn btn-secondary btn-sm" type="button" @click="showAdd = false">关闭</button>
         </div>
         <div class="modal-body">
           <div class="form-grid">
             <div class="field full"><label>课程名称</label><input v-model="courseForm.name" type="text"></div>
             <div class="field"><label>授课教练ID</label><input v-model.number="courseForm.coach_id" type="number"></div>
-            <div class="field"><label>课程类型</label><input v-model="courseForm.category" type="text"></div>
+            <div class="field"><label>课程分类</label><input v-model="courseForm.category" type="text"></div>
             <div class="field"><label>时长(分钟)</label><input v-model.number="courseForm.duration" type="number"></div>
             <div class="field"><label>价格</label><input v-model.number="courseForm.price" type="number"></div>
-            <div class="field"><label>课程类型(1团课/2私教)</label><input v-model="courseForm.course_type" type="text"></div>
+            <div class="field"><label>课程类型(group团课/private私教)</label><input v-model="courseForm.course_type" type="text"></div>
             <div class="field"><label>最大人数</label><input v-model.number="courseForm.max_count" type="number"></div>
-            <div class="field"><label>状态</label>
+            <div class="field">
+              <label>状态</label>
               <select v-model="courseForm.status">
                 <option>已上架</option>
                 <option>已下架</option>
@@ -113,7 +118,7 @@
         </div>
         <div class="modal-footer">
           <button class="btn btn-secondary" type="button" @click="showAdd = false">取消</button>
-          <button class="btn btn-primary" type="button" @click="saveCourse">保存</button>
+          <button class="btn btn-primary" type="button" @click="saveCourse">{{ isEdit ? '更新' : '保存' }}</button>
         </div>
       </div>
     </div>
@@ -128,12 +133,13 @@
           <div class="data-table-wrap">
             <table class="data-table">
               <thead>
-                <tr><th>会员</th><th>手机号</th><th>状态</th></tr>
+                <tr><th>会员</th><th>手机号</th><th>预约时间</th><th>状态</th></tr>
               </thead>
               <tbody>
                 <tr v-for="item in reservationList" :key="item.member">
                   <td>{{ item.member }}</td>
                   <td>{{ item.phone }}</td>
+                  <td>{{ item.appointment_time }}</td>
                   <td><span class="badge" :class="item.status === '已签到' ? 'success' : 'info'">{{ item.status }}</span></td>
                 </tr>
               </tbody>
@@ -149,18 +155,23 @@
 import { computed, reactive, ref, onMounted } from "vue";
 import { useAuth } from "../composables/useAuth";
 import { useToast } from "../composables/useToast";
-import {create_courses, list_courses} from "../api/courses.js";
-import {useUserStore} from "../stores/user.js";
+import {create_courses, delete_courses, list_courses, toggle_courses, update_courses,get_course_appointments} from "../api/courses.js";
+import { useUserStore } from "../stores/user.js";
+
 const useStore = useUserStore();
 const auth = useAuth();
 const toast = useToast();
 const role = useStore.role;
-const canManage = role === "admin" || role === "reception";
+const canManage = role === "admin" || role === "reception" || role === "coach";
 
 const activeTab = ref("all");
 const showAdd = ref(false);
 const showReservation = ref(false);
 const selectedCourse = ref(null);
+
+// =========编辑状态变量==========
+const isEdit = ref(false);
+const editCourseId = ref(null);
 
 // 查询参数：对接后端crud
 const queryForm = reactive({
@@ -173,13 +184,13 @@ const queryForm = reactive({
   coach_id: ""
 });
 
-// 新增表单
+// 新增/编辑共用表单
 const courseForm = ref({
   name: "",
   course_type: null,
-  category:null,
+  category: null,
   coach_id: null,
-  start_time:null,
+  start_time: null,
   duration: null,
   max_count: null,
   price: null,
@@ -192,14 +203,7 @@ const tableData = ref([]);
 // 当前页面列表
 const currentList = computed(() => tableData.value);
 
-const reservationList = computed(() => {
-  if (!selectedCourse.value) return [];
-  return [
-    { member: "王琳", phone: "13800000001", status: "已预约" },
-    { member: "赵敏", phone: "13800000003", status: "已预约" },
-    { member: "郑雪", phone: "13800000011", status: "已签到" }
-  ];
-});
+const reservationList = ref([])
 
 const pageTitle = computed(() => {
   if (role === "reception") return "预约处理";
@@ -224,9 +228,7 @@ function statusClass(status) {
 // 加载后端分页列表
 async function loadData() {
   try {
-    // get查询参数
     const params = { ...queryForm };
-    // 空字符串转undefined，避免传给后端空字符串过滤
     Object.keys(params).forEach(k => {
       if (params[k] === "") params[k] = undefined;
     });
@@ -240,15 +242,15 @@ async function loadData() {
   }
 }
 
-// tab切换 后端course_type：1团课，2私教
+// tab切换 后端course_type：group团课，private私教
 function handleTabChange(tab) {
   activeTab.value = tab;
   queryForm.page = 1;
-  if(tab === 'group'){
+  if (tab === 'group') {
     queryForm.course_type = 'group';
-  }else if(tab === 'private'){
-    queryForm.course_type = 'private ';
-  }else{
+  } else if (tab === 'private') {
+    queryForm.course_type = 'private'; //修复原来多余空格 bug
+  } else {
     queryForm.course_type = '';
   }
   loadData();
@@ -273,48 +275,72 @@ function resetSearch() {
   loadData();
 }
 
+// 打开新增
 function openAdd() {
-  // 修复：ref必须 .value 访问内部对象
+  isEdit.value = false;
+  editCourseId.value = null;
   const form = courseForm.value;
   form.name = "";
   form.coach_id = null;
   form.duration = null;
   form.price = null;
   form.category = null;
-  form.course_type = activeTab.value === "group" ? 'group' :'private';
+  form.course_type = activeTab.value === "group" ? 'group' : 'private';
   form.max_count = null;
   form.status = "已上架";
   form.start_time = null;
   showAdd.value = true;
 }
 
-// 保存新增课程，调用后端post接口
+// =========打开编辑：回填行数据==========
+function openEdit(rowItem) {
+  isEdit.value = true;
+  editCourseId.value = rowItem.id;
+  // 回填后端返回全部字段
+  courseForm.value = {
+    name: rowItem.name,
+    course_type: rowItem.course_type,
+    category: rowItem.category,
+    coach_id: rowItem.coach_id,
+    duration: rowItem.duration,
+    max_count: rowItem.max_count,
+    price: rowItem.price,
+    status: rowItem.status,
+    start_time: rowItem.start_time
+  };
+  showAdd.value = true;
+}
+
+// 保存：新增 OR 更新
 async function saveCourse() {
   try {
     const form = courseForm.value;
-    // 组装纯净普通对象，脱离reactive代理，严格匹配OpenAPI schema
     const submitData = {
       name: form.name,
-      course_type: form.course_type, // 字符串 "1" / "2"
-      category: form.category,       // 字符串
+      course_type: form.course_type,
+      category: form.category,
       coach_id: Number(form.coach_id),
       duration: Number(form.duration),
       max_count: Number(form.max_count),
       price: Number(form.price),
-      start_time: new Date().toISOString(), // 带Z标准UTC时间
       status: form.status
     };
 
-    console.log("提交数据", submitData);
-    // ✅ 传纯净对象，不要传ref、不要传ref.value代理对象
-    let res = await create_courses(submitData);
-    console.log(res);
+    if (isEdit.value) {
+      // 编辑模式 PATCH 更新
+      await update_courses(editCourseId.value,submitData);
+      toast.show("课程已更新");
+    } else {
+      // 新增模式 POST
+      submitData.start_time = new Date().toISOString();
+      await create_courses(submitData);
+      toast.show("课程已新增");
+    }
 
     showAdd.value = false;
-    toast.show("课程已新增");
     loadData();
 
-    // 重置表单
+    //清空表单
     courseForm.value = {
       name: "",
       course_type: null,
@@ -328,39 +354,45 @@ async function saveCourse() {
     };
   } catch (e) {
     console.error(e);
-    toast.show("新增失败", "error");
+    toast.show(isEdit.value ? "更新失败" : "新增失败", "error");
   }
 }
 
 async function toggle(item) {
   try {
     const newStatus = item.status === "已下架" ? "已上架" : "已下架";
-    await request.patch(`/api/v1/courses/${item.id}`, { status: newStatus });
-    toast.show(item.name + " 已" + newStatus);
+    await toggle_courses(item.id, { status: newStatus });
+    toast.show(item.name + newStatus);
     loadData();
   } catch {
-    toast.show("状态修改失败","error");
+    toast.show("状态修改失败", "error");
   }
 }
 
 async function remove(item) {
   try {
-    await request.delete(`/api/v1/courses/${item.id}`);
+    await delete_courses(item.id);
     toast.show("课程已删除");
     loadData();
   } catch {
-    toast.show("删除失败","error");
+    toast.show("删除失败", "error");
   }
 }
 
-function openReservation(item) {
+async function openReservation(item) {
   selectedCourse.value = item;
   showReservation.value = true;
+  await get_appointments()
+}
+async function get_appointments(){
+  const res = await get_course_appointments(selectedCourse.value.id);
+  reservationList.value=res.data.items
 }
 
 function book(item) {
   toast.show("预约成功，可在会员个人中心查看");
 }
+
 
 onMounted(() => {
   loadData();

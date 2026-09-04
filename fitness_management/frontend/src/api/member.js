@@ -1,9 +1,15 @@
 import request from './request'
-export function getMemberList() {
+export function getMemberList(data) {
     return request({
         url: '/members/',
         method: 'get',
-
+        params:{
+           page:data.page,
+           page_size:data.page_size,
+           keyword:data.keyword,
+            status:data.status,
+            card_type:data.card_type,
+        }
     })
 }
 export function addMember(formData) {
@@ -19,13 +25,34 @@ export function deleteMember(id) {
         method: 'delete',
     })
 }
-export function renewMember(data) {
+export function renewMember(id,data) {
     return request({
-        url: `/members/${data.id}/renew`,
+        url: `/members/${id}/renew`,
         method: 'put',
-        params: {          // ✅ 用 params，axios 会自动拼到 URL query 上
-      member_id: data.id,
-      renew: data.renew
-    }
+        data: data
+    })
+}
+
+export function get_detail(id) {
+    return request({
+        url: `/members/${id}`,
+        method: 'get',
+    })
+}
+
+
+export function updateMember(id,formData) {
+    return request({
+        url: `/members/${id}`,
+        method: 'put',
+        data: formData
+    })
+}
+
+export function updateMemberStatus(id,data) {
+    return request({
+        url: `/members/${id}/status`,
+        method: 'put',
+        data: data
     })
 }

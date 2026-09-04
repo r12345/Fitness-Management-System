@@ -2,7 +2,7 @@
 import decimal
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class MemberRequest(BaseModel):
@@ -16,3 +16,15 @@ class MemberRequest(BaseModel):
     balance: decimal.Decimal
     status: str
     remark: str
+
+
+class RenewMember(BaseModel):
+    months: int
+    amount: decimal.Decimal
+    remark: str
+    card_type:str
+    pay_method: str
+
+
+class MemberStatus(BaseModel):
+    status:str

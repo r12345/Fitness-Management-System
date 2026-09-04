@@ -12,7 +12,7 @@ class ConsumeRecord(Base):
     __tablename__ = "consume_record"
     id: Mapped[int] = mapped_column(primary_key=True, comment="消费编号")
     member_id: Mapped[int] = mapped_column(
-        ForeignKey("member.id", ondelete="CASCADE"), comment="会员"
+        ForeignKey("member.id", ondelete="CASCADE"), nullable=True,comment="会员"
     )
     item: Mapped[str] = mapped_column(String(64),comment="消费项目")
     amount: Mapped[Decimal] = mapped_column(DECIMAL(10,2),comment="金额")
