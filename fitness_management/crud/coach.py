@@ -2,7 +2,9 @@
 from fastapi import HTTPException
 from sqlalchemy import select, func, insert, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
-from ..models.coach import Coach
+
+from ..models import Course, Appointment, TrainPlan
+from ..models.coach import Coach, Schedule
 from typing import Optional
 from ..schemas.coach import CoachCreate, CoachUpdate
 
@@ -96,23 +98,47 @@ async def update_coach_obj(db: AsyncSession, coach_id: int, coach_data: CoachUpd
 
 # 删除教练
 async def delete_coach_obj(db: AsyncSession, coach_id: int):
+    # 删除教练
     stmt = delete(Coach).where(Coach.id == coach_id)
     result = await db.execute(stmt)
-    coach = result.scalar_one_or_none()
-    if not coach:
-        return None
-    del_stmt = delete(Coach).where(Coach.id == coach_id)
-    await db.execute(del_stmt)
+
     await db.commit()
     return True
 
+
 # 教练授课方式
 async def get_coach_statistics_obj(db: AsyncSession, coach_id: int):
-    pass
+    # 1.读取教练基础：累计课时、平均评分（直接coach表拿）
+    coach = await db.scalar(select(Coach).where(Coach.id == coach_id))
+    if not coach:
+        return {
+            "coach_id": coach_id,
+            "total_hours": 0,
+            "student_count": 0,
+            "average_score": 0.0,
+            "revenue": 0.0
+        }
 
+    # 2.去重学员数量：预约过该教练课程的学员总数
+    student_stmt = (
+        select(func.count(Appointment.member_id.distinct()))
+        .join(Course, Appointment.course_id == Course.id)
+        .where(Course.coach_id == coach_id)
+    )
+    student_count = await db.scalar(student_stmt) or 0
 
+    # 3.总收入：该教练所有课程价格总和
+    revenue_stmt = select(func.sum(Course.price)).where(Course.coach_id == coach_id)
+    revenue = await db.scalar(revenue_stmt) or 0.0
 
-
+    result = {
+        "coach_id": coach_id,
+        "total_hours": coach.hours,
+        "student_count": int(student_count),
+        "average_score": round(float(coach.score), 1),
+        "revenue": round(float(revenue), 2)
+    }
+    return result
 
 
 

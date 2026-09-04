@@ -47,12 +47,14 @@ class CoachUpdate(BaseModel):
     hire_date: Optional[str] = None
     status: Optional[int] = None
 
-3 `
-class CoachStatistics(BaseModel):
-    id: int
-    name: str
-    specialties: List[str]
-    status: Optional[str]
-    hire_date: Optional[date]
+
+# 教练授课统计返回模型
+class CoachStatisticsResp(BaseModel):
+    coach_id: int
+    total_hours: int
+    student_count: int
+    average_score: float
+    revenue: float
+
     class Config:
         from_attributes = True
