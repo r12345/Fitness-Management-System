@@ -46,3 +46,13 @@ class CoachUpdate(BaseModel):
     salary: Optional[float] = None
     hire_date: Optional[str] = None
     status: Optional[int] = None
+
+3 `
+class CoachStatistics(BaseModel):
+    id: int
+    name: str
+    specialties: List[str]
+    status: Optional[str]
+    hire_date: Optional[date]
+    class Config:
+        from_attributes = True
