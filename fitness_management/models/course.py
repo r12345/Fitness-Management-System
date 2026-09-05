@@ -1,8 +1,7 @@
 """课程相关数据模型。"""
-from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import Float, ForeignKey, String, Text,DateTime
+from sqlalchemy import Float, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from . import Base
@@ -19,12 +18,15 @@ class Course(Base):
     coach_id: Mapped[int] = mapped_column(
         ForeignKey("coach.id", ondelete="CASCADE"), nullable=False, comment="教练"
     )
-    start_time: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True, comment="上课时间")
+    start_time: Mapped[Optional[str]] = mapped_column(String(64), nullable=True, comment="上课时间")
     duration: Mapped[int] = mapped_column(nullable=False, comment="时长")
     max_count: Mapped[Optional[int]] = mapped_column(nullable=True, comment="最大人数")
+    capacity: Mapped[Optional[int]] = mapped_column(nullable=True, comment="私教会员名额")
+    booked_count: Mapped[int] = mapped_column(default=0, nullable=False, comment="已预约人数")
     price: Mapped[float] = mapped_column(Float, nullable=False, comment="价格")
     status: Mapped[str] = mapped_column(String(16), nullable=False, comment="状态")
     remark: Mapped[Optional[str]] = mapped_column(Text, nullable=True, comment="课程说明")
 
     coach: Mapped["Coach"] = relationship(back_populates="courses")
     appointments: Mapped[list["Appointment"]] = relationship(back_populates="course")
+    schedules: Mapped[list["Schedule"]] = relationship(back_populates="course")

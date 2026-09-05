@@ -2,7 +2,7 @@
 from datetime import date, time
 from typing import Optional
 
-from sqlalchemy import Float, ForeignKey, String
+from sqlalchemy import Date, Float, ForeignKey, String
 from sqlalchemy.orm import mapped_column, Mapped, relationship
 
 from . import Base
@@ -40,11 +40,19 @@ class Schedule(Base):
     __tablename__ = "coach_schedule"
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True, comment="排班编号")
     coach_id: Mapped[int] = mapped_column(
-        ForeignKey("coach.id", ondelete="CASCADE"), comment="教练"
+        ForeignKey("coach.id", ondelete="CASCADE"), nullable=False, comment="教练"
     )
-    weekday: Mapped[str] = mapped_column(String(16), nullable=False, comment="星期")
+    course_id: Mapped[int] = mapped_column(
+        ForeignKey("course.id", ondelete="CASCADE"),
+        nullable=False,
+        comment="排课课程"
+    )
+    schedule_date: Mapped[date] = mapped_column(Date, nullable=False, comment="上课日期")
     start_time: Mapped[time] = mapped_column(nullable=False, comment="开始时间")
     end_time: Mapped[time] = mapped_column(nullable=False, comment="结束时间")
+    location: Mapped[str] = mapped_column(String(255), nullable=False, comment="上课地点")
+    booked_count: Mapped[int] = mapped_column(default=0, nullable=False, comment="已预约人数")
     status: Mapped[str] = mapped_column(String(16), nullable=False, comment="状态")
 
     coach: Mapped["Coach"] = relationship(back_populates="schedules")
+    course: Mapped["Course"] = relationship(back_populates="schedules")

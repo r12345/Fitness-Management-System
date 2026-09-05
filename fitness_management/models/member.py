@@ -1,9 +1,8 @@
 """会员与会员卡相关数据模型。"""
-"""会员与会员卡相关数据模型。"""
 from datetime import date
 from typing import Optional
 
-from sqlalchemy import ForeignKey, String, Text
+from sqlalchemy import Float, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from . import Base
@@ -27,6 +26,8 @@ class Member(Base):
     card_start: Mapped[Optional[date]] = mapped_column(nullable=True, comment="开卡时间")
     card_expire: Mapped[date] = mapped_column(nullable=False, comment="到期时间")
     balance: Mapped[Optional[float]] = mapped_column(nullable=True, default=0, comment="余额")
+    height: Mapped[Optional[float]] = mapped_column(Float, nullable=True, comment="身高，单位厘米")
+    weight: Mapped[Optional[float]] = mapped_column(Float, nullable=True, comment="体重，单位千克")
     status: Mapped[str] = mapped_column(String(16), nullable=False, comment="卡状态")
     remark: Mapped[Optional[str]] = mapped_column(Text, nullable=True, comment="备注")
 

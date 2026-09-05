@@ -16,3 +16,6 @@ from fitness_management.api.v1 import coaches
 
 courses_router = APIRouter(prefix='/api/v1/courses', tags=['课程管理'])
 from fitness_management.api.v1 import courses
+
+coach_panel_router = APIRouter(prefix='/api/v1/coach_panel', tags=['教练工作台'])
+from fitness_management.api.v1 import coach_panel
