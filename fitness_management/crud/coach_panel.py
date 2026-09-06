@@ -1,37 +1,57 @@
 """教练工作台相关数据库操作。"""
-from fastapi import Depends
-from sqlalchemy import select, func, insert
+from typing import Optional
+
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from fitness_management.core.database import get_db
 from fitness_management.models import Schedule, Course, Coach
-from fitness_management.schemas.coach_panel import AddScheduleItem
+from fitness_management.schemas.coach_panel import ScheduleCreate
 
 
-async def get_my_schedule(db: AsyncSession = Depends(get_db),coach_id: int = None):
-    """获取教练排班项"""
+async def get_my_schedule(db: AsyncSession, coach_id: int) -> list[dict]:
+    """获取教练的排课列表（含课程名、预约人数）。"""
     stmt = (
         select(
-        Schedule.id,  # 排班项ID
-        Course.start_time.label("schedule_start"),  # 排班开始时间
-        Schedule.working_time,  # 工作时间
-        # Schedule.start_time,  # 课程开始时间
-        # Schedule.end_time,  # 课程结束时间
-        Course.name.label("course_name"),  # 课程名称
-        # Course.location.label("location"),  # 课程地点
-        func.count().label("reserve_count"),  # 预约人数
-        Schedule.status  # 状态
-    )
-        .join(Course, Course.coach_id == Schedule.coach_id)
-        .where(Schedule.coach_id == coach_id)
-        .group_by(Schedule.id, Course.name, Schedule.status)
-        .order_by(Schedule.working_time.desc()
+            Schedule.id,
+            Schedule.coach_id,
+            Schedule.course_id,
+            Course.name.label("course_name"),
+            Schedule.schedule_date,
+            Schedule.start_time,
+            Schedule.end_time,
+            Schedule.location,
+            Schedule.booked_count,
+            Schedule.status,
         )
+        .join(Course, Course.id == Schedule.course_id)
+        .where(Schedule.coach_id == coach_id)
+        .order_by(Schedule.schedule_date.desc(), Schedule.start_time.asc())
     )
     result = await db.execute(stmt)
-    rows = result.mappings().all()  # 转换为字典列表
-    return rows
+    return [dict(row) for row in result.mappings().all()]
 
-def create_schedule(db: AsyncSession, coach_id: int, schedule: AddScheduleItem):
-    """创建排班项"""
-    pass
+
+async def create_schedule(db: AsyncSession, coach_id: int, data: ScheduleCreate) -> Optional[Schedule]:
+    """新增排课（coach_id 由调用方传入）。"""
+    # 校验教练存在
+    coach = await db.scalar(select(Coach).where(Coach.id == coach_id))
+    if not coach:
+        return None
+    # 校验课程存在
+    course = await db.scalar(select(Course).where(Course.id == data.course_id))
+    if not course:
+        return None
+
+    schedule = Schedule(
+        coach_id=coach_id,
+        course_id=data.course_id,
+        schedule_date=data.schedule_date,
+        start_time=data.start_time,
+        end_time=data.end_time,
+        location=data.location,
+        booked_count=0,
+        status=data.status,
+    )
+    db.add(schedule)
+    await db.flush()
+    return schedule
