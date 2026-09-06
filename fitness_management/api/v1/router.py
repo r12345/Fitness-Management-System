@@ -22,3 +22,12 @@ from fitness_management.api.v1 import coach_panel
 
 training_router = APIRouter(prefix='/api/v1/training', tags=['训练打卡与运动记录'])
 from fitness_management.api.v1 import training
+
+equipment_router = APIRouter(prefix='/api/v1/equipment', tags=['器材管理'])
+from fitness_management.api.v1 import equipment
+
+consumptions_router = APIRouter(prefix='/api/v1/consumption', tags=['消费记录'])
+from fitness_management.api.v1 import consumption
+
+statistics_router = APIRouter(prefix='/api/v1/statistics', tags=['运营数据'])
+from fitness_management.api.v1 import statistics

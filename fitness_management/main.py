@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fitness_management.core.database import async_engine
 import fitness_management.models as models  # 导入models模块，确保模型类被注册到Base的metadata中
 from fitness_management.api.v1.router import user_router, members_router, member_center_router, courses_router, \
-    coach_panel_router
+    coach_panel_router, equipment_router, statistics_router, consumptions_router
 from core.database import async_engine
 import models  # 导入您的models模块，确保模型类被注册到Base的metadata中
 from fitness_management.api.v1.router import user_router, members_router, member_center_router, coaches_router, \
@@ -20,6 +20,9 @@ app.include_router(courses_router)
 app.include_router(coaches_router)
 app.include_router(coach_panel_router)
 app.include_router(training_router)
+app.include_router(equipment_router)
+app.include_router(statistics_router)
+app.include_router(consumptions_router)
 
 
 
