@@ -139,6 +139,7 @@
             <option>暂停</option>
           </select>
         </div>
+        <div class="field"><label>备注</label><input v-model="form.remark" type="text"></div>
       </div>
     </div>
     <div class="modal-footer">
@@ -300,6 +301,10 @@
           <label>备注</label>
           <input v-model="renewForm.remark" type="text" placeholder="续费备注信息">
         </div>
+        <div class="field">
+          <label>操作人</label>
+          <input v-model="renewForm.operator" type="text" placeholder="操作人姓名">
+        </div>
       </div>
     </div>
     <div class="modal-footer">
@@ -352,7 +357,8 @@ import {useToast} from "../composables/useToast";
 import {addMember, deleteMember, get_detail, getMemberList, renewMember, updateMember,updateMemberStatus} from "../api/member.js";
 import {onMounted} from "vue";
 import {useRouter} from "vue-router";
-
+import {useUserStore} from "../stores/user.js";
+const userStore = useUserStore()
 const router = useRouter();
 const auth = useAuth();
 const toast = useToast();
@@ -480,7 +486,7 @@ const renewForm = reactive({
   remark: "",
   card_type:'',
   pay_method: "",
-
+  operator: userStore.role_name
 })
 
 // async function updateMemberStatus(){
@@ -554,10 +560,14 @@ async function saveMember() {
   try {
     let res;
     if (isEdit.value) {
+      console.log(form)
       res = await updateMember(nowMemberId.value, form);
       // 如果后端返回code判断，开启下面这行
+      console.log(res)
     } else {
+      console.log(form)
       res = await addMember(form);
+      console.log(res)
     }
 
     // 根据模式动态提示

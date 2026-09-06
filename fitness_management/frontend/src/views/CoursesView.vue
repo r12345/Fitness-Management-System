@@ -350,9 +350,8 @@ async function saveCourse() {
       await create_courses(submitData);
       toast.show("课程已新增");
     }
-
+    await loadData();
     showAdd.value = false;
-    loadData();
 
     //清空表单
     courseForm.value = {

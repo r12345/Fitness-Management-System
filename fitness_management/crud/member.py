@@ -84,7 +84,7 @@ async def delete_member(member_id: int, db: AsyncSession):
         return False
 
 
-async def renew_card(member_id: int,renew_info:RenewMember, db: AsyncSession,user:User):
+async def renew_card(member_id: int,renew_info:RenewMember,db: AsyncSession,user:User):
     query = select(Member).where(Member.id == member_id)
     result = await db.execute(query)
     member = result.scalar_one_or_none()
@@ -100,12 +100,15 @@ async def renew_card(member_id: int,renew_info:RenewMember, db: AsyncSession,use
                 member.card_expire += timedelta(days=30*renew_info.months)
                 member.card_type = renew_info.card_type
                 await db.commit()
+            operator = renew_info.operator
+            if operator == '':
+                operator = user.name
             consume_record = ConsumeRecord(
                 member_id=member.id,
                 item=renew_info.remark,
                 amount=renew_info.amount,
                 pay_method=renew_info.pay_method,
-                operator=user.name,
+                operator=operator,
                 created_at=datetime.datetime.now(),
                 member=member
             )

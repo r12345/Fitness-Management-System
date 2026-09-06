@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from .router import coach_panel_router
 from ...core.database import get_db
-from ...crud.coach_panel import get_my_schedule, add_schedule
+from ...crud.coach_panel import get_my_schedule, create_schedule
 from ...schemas.coach_panel import MyScheduleItem, AddScheduleItem
 from ...utils.res import success_response
 
@@ -27,5 +27,5 @@ async def post_coach_schedules(
         schedule: AddScheduleItem = Depends(),
 ):
     """添加教练排班信息。"""
-    data = await add_schedule(db, schedule)
+    data = await create_schedule(db, schedule)
     return success_response(msg="success", data=data)

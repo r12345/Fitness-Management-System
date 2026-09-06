@@ -1,4 +1,5 @@
 """课程相关数据模型。"""
+from datetime import datetime
 from typing import Optional
 
 from sqlalchemy import Float, ForeignKey, String, Text
@@ -18,7 +19,7 @@ class Course(Base):
     coach_id: Mapped[int] = mapped_column(
         ForeignKey("coach.id", ondelete="CASCADE"), nullable=False, comment="教练"
     )
-    start_time: Mapped[Optional[str]] = mapped_column(String(64), nullable=True, comment="上课时间")
+    start_time: Mapped[Optional[datetime]] = mapped_column(String(64), nullable=True, comment="上课时间")
     duration: Mapped[int] = mapped_column(nullable=False, comment="时长")
     max_count: Mapped[Optional[int]] = mapped_column(nullable=True, comment="最大人数")
     capacity: Mapped[Optional[int]] = mapped_column(nullable=True, comment="私教会员名额")
