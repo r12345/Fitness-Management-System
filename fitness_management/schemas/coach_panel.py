@@ -1,5 +1,5 @@
 """教练工作台请求与响应模型。"""
-from datetime import date, time
+from datetime import date,time
 from typing import Optional
 
 from pydantic import BaseModel, Field
@@ -27,7 +27,5 @@ class ScheduleItem(BaseModel):
     location: str
     booked_count: int
     status: str
-
     class Config:
         from_attributes = True
-
