@@ -47,3 +47,20 @@ export function getCoachStat(coachId){
     method:'get'
   })
 }
+
+// 教练工作台：获取我的排课
+export function getSchedules() {
+  return request({
+    url: '/coach_panel/schedules',
+    method: 'get'
+  })
+}
+
+// 教练工作台：新增排课
+export function addSchedule(data) {
+  return request({
+    url: '/coach_panel/schedules',
+    method: 'post',
+    data
+  })
+}

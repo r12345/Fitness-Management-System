@@ -40,9 +40,14 @@
           <table class="data-table">
             <thead><tr><th>日期</th><th>时段</th><th>课程</th><th>地点</th><th>预约人数</th><th>状态</th><th>操作</th></tr></thead>
             <tbody>
-              <tr v-for="(item, index) in schedules" :key="index">
-                <td>{{ item.date }}</td><td>{{ item.time }}</td><td>{{ item.course }}</td><td>{{ item.location }}</td><td>{{ item.booked }} 人</td>
-                <td><span class="badge" :class="item.status === '已签到' ? 'success' : item.status === '已预约' ? 'info' : 'warn'">{{ item.status }}</span></td>
+              <tr v-if="!schedules.length"><td colspan="7" style="text-align:center;color:#999;">暂无排课</td></tr>
+              <tr v-for="(item, index) in schedules" :key="item.id">
+                <td>{{ item.schedule_date }}</td>
+                <td>{{ item.start_time }} ~ {{ item.end_time }}</td>
+                <td>{{ item.course_name }}</td>
+                <td>{{ item.location }}</td>
+                <td>{{ item.booked_count }} 人</td>
+                <td><span class="badge" :class="item.status === '已签到' ? 'success' : item.status === '未开始' ? 'info' : 'warn'">{{ item.status }}</span></td>
                 <td><button class="btn btn-secondary btn-sm" type="button" @click="checkSchedule(index)">签到确认</button></td>
               </tr>
             </tbody>
@@ -102,9 +107,16 @@
         </div>
         <div class="modal-body">
           <div class="form-grid">
-            <div class="field"><label>课程</label><input v-model="scheduleForm.course" type="text"></div>
-            <div class="field"><label>日期</label><input v-model="scheduleForm.date" type="date"></div>
-            <div class="field"><label>时段</label><input v-model="scheduleForm.time" type="text"></div>
+            <div class="field">
+              <label>课程</label>
+              <select v-model="scheduleForm.course_id">
+                <option :value="null" disabled>请选择课程</option>
+                <option v-for="c in courseOptions" :key="c.id" :value="c.id">{{ c.name }}</option>
+              </select>
+            </div>
+            <div class="field"><label>日期</label><input v-model="scheduleForm.schedule_date" type="date"></div>
+            <div class="field"><label>开始时间</label><input v-model="scheduleForm.start_time" type="time"></div>
+            <div class="field"><label>结束时间</label><input v-model="scheduleForm.end_time" type="time"></div>
             <div class="field"><label>地点</label><input v-model="scheduleForm.location" type="text"></div>
           </div>
         </div>
@@ -141,9 +153,11 @@
 </template>
 
 <script setup>
-import { reactive, ref } from "vue";
+import { reactive, ref, onMounted } from "vue";
 import { useToast } from "../composables/useToast";
-import { coachPlans, coachSchedules, coachStudents } from "../data/mock";
+import { coachPlans, coachStudents } from "../data/mock";
+import { getSchedules, addSchedule } from "../api/coach";
+import { list_courses } from "../api/courses";
 import StatCard from "../components/StatCard.vue";
 
 const toast = useToast();
@@ -154,7 +168,8 @@ const tabs = [
   { key: "records", label: "授课记录" },
   { key: "plans", label: "训练计划" }
 ];
-const schedules = ref(coachSchedules.map((item) => ({ ...item })));
+const schedules = ref([]);
+const courseOptions = ref([]);
 const students = ref(coachStudents.map((item) => ({ ...item })));
 const records = [
   { date: "2026-08-26", course: "增肌基础课", student: "王琳", hours: "1 课时", score: "5.0", comment: "动作执行标准" },
@@ -163,17 +178,70 @@ const records = [
 const plans = ref(coachPlans.map((item) => ({ ...item })));
 const showSchedule = ref(false);
 const showPlan = ref(false);
-const scheduleForm = reactive({ course: "", date: "", time: "", location: "" });
+const scheduleForm = reactive({ course_id: null, schedule_date: "", start_time: "", end_time: "", location: "" });
 const planForm = reactive({ student: "", goal: "", part: "", action: "", sets: "", frequency: "" });
+
+async function loadSchedules() {
+  try {
+    const res = await getSchedules();
+    if (res.code === 0) {
+      schedules.value = res.data || [];
+    }
+  } catch (e) {
+    console.error("加载排课失败", e);
+  }
+}
+
+async function loadCourses() {
+  try {
+    const res = await list_courses({ page: 1, page_size: 100 });
+    if (res.code === 0) {
+      courseOptions.value = res.data?.items || [];
+    }
+  } catch (e) {
+    console.error("加载课程列表失败", e);
+  }
+}
+
+onMounted(() => {
+  loadSchedules();
+  loadCourses();
+});
 
 function openSchedule() {
   showSchedule.value = true;
 }
 
-function saveSchedule() {
-  schedules.value.unshift({ ...scheduleForm, booked: 0, status: "未开始" });
-  showSchedule.value = false;
-  toast.show("排课已新增");
+async function saveSchedule() {
+  if (!scheduleForm.course_id || !scheduleForm.schedule_date || !scheduleForm.start_time || !scheduleForm.end_time) {
+    toast.show("请填写完整排课信息");
+    return;
+  }
+  try {
+    const res = await addSchedule({
+      course_id: scheduleForm.course_id,
+      schedule_date: scheduleForm.schedule_date,
+      start_time: scheduleForm.start_time + ":00",
+      end_time: scheduleForm.end_time + ":00",
+      location: scheduleForm.location,
+      status: "未开始"
+    });
+    if (res.code === 0) {
+      toast.show("排课已新增");
+      showSchedule.value = false;
+      scheduleForm.course_id = null;
+      scheduleForm.schedule_date = "";
+      scheduleForm.start_time = "";
+      scheduleForm.end_time = "";
+      scheduleForm.location = "";
+      loadSchedules();
+    } else {
+      toast.show(res.msg || "排课失败");
+    }
+  } catch (e) {
+    toast.show("排课失败，请重试");
+    console.error(e);
+  }
 }
 
 function checkSchedule(index) {
