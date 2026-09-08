@@ -23,3 +23,15 @@ class MemberStatisticsResponse(BaseModel):
     """会员数据统计报表模型。"""
     activate_members: int
     card_distribution: List[MemberCardDistributionResponse]
+
+
+
+class EquipmentStatus(BaseModel):
+    """设备数据统计报表模型。"""
+    status: str
+    count: int
+
+class EquipmentStatisticsResponse(BaseModel):
+    """设备数据统计报表模型。"""
+    total:int
+    status_type:List[EquipmentStatus]

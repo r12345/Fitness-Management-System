@@ -4,6 +4,7 @@ from typing import Optional
 
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload
 
 from fitness_management.models import CheckinRecord, ExerciseRecord, TrainPlan, Member, Coach
 from fitness_management.schemas.training import (
@@ -119,10 +120,16 @@ async def get_training_statistics(db: AsyncSession, member_id: int, period: str)
 
 # ===== 训练计划 =====
 async def list_my_plans(db: AsyncSession, coach_id: int) -> list[TrainPlan]:
-    result = await db.execute(
-        select(TrainPlan).where(TrainPlan.coach_id == coach_id).order_by(TrainPlan.id.desc())
+    stmt = (
+        select(TrainPlan)
+        .options(joinedload(TrainPlan.member))  # ✅一次性把关联Member查出来
+        .where(TrainPlan.coach_id == coach_id)
+        .order_by(TrainPlan.id.desc())
     )
-    return list(result.scalars().all())
+    result = await db.execute(stmt)
+    plans = list(result.scalars().all())
+    # 使用：plan.member.member_name
+    return plans
 
 
 async def create_plan(db: AsyncSession, coach_id: int, data: PlanCreate) -> TrainPlan:

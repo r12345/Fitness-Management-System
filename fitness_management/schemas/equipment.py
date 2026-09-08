@@ -1,5 +1,5 @@
 """器材、报修、盘点和保养模型。"""
-from datetime import datetime
+from datetime import datetime, date
 from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict
@@ -11,7 +11,7 @@ class EquipmentBase(BaseModel):
     model: str
     category: str
     location: str
-    purchase_date: Optional[datetime] = None
+    purchase_date: Optional[date] = None
     price: float =None
     status: str = "正常"
     remark: Optional[str] = None

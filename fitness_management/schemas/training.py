@@ -4,6 +4,8 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
+from fitness_management.schemas.member import MemberRequest
+
 
 # ===== 打卡 =====
 class CheckinCreate(BaseModel):
@@ -91,6 +93,30 @@ class PlanUpdate(BaseModel):
     remark: Optional[str] = None
 
 
+class MemberItem(BaseModel):
+    id: int
+    name: str
+    class Config:
+        from_attributes = True
+
+class PlanItemSelf(BaseModel):
+    """训练计划响应。"""
+    id: int
+    member_id: int
+    coach_id: int
+    goal: str
+    body_part: str
+    actions: str
+    sets_reps: str
+    frequency: str
+    start_date: date
+    end_date: date
+    remark: Optional[str] = None
+    member : Optional[MemberItem]
+
+    class Config:
+        from_attributes = True
+
 class PlanItem(BaseModel):
     """训练计划响应。"""
     id: int
@@ -107,3 +133,4 @@ class PlanItem(BaseModel):
 
     class Config:
         from_attributes = True
+

@@ -64,3 +64,31 @@ async def login_user(user_info:AuthRequest,db:AsyncSession):
         return user
     # 如果用户不存在或密码不正确，返回错误信息
     return None
+
+
+async def get_role_id(user,db:AsyncSession):
+    if user.role == 'member':
+        query = select(Member).where(Member.user_id == user.id)
+        result = await db.execute(query)
+        member = result.scalar_one_or_none()
+        if member is None:
+            return None
+        return member.id
+    elif user.role == 'coach':
+        query = select(Coach).where(Coach.user_id == user.id)
+        result = await db.execute(query)
+        coach = result.scalar_one_or_none()
+        if coach is None:
+            return None
+        return coach.id
+    elif user.role == 'reception':
+        query = select(Reception).where(Reception.user_id == user.id)
+        result = await db.execute(query)
+        reception = result.scalar_one_or_none()
+        if reception is None:
+            return None
+        return reception.id
+    else:
+        return None
+
+

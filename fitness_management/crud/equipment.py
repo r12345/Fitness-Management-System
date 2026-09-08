@@ -23,13 +23,15 @@ async def list_equipment(keyword, category, status, page, page_size, db:AsyncSes
     if status:
         stmt = stmt.where(Equipment.status == status)
 
-    offset = (page - 1) * page_size
-    query = stmt.offset(offset).limit(page_size)
 
     # 统计总数
-    total_query = select(func.count()).select_from(query.subquery())
+    total_query = select(func.count()).select_from(stmt.subquery())
     total_result = await db.execute(total_query)
     total = total_result.scalar() or 0
+
+
+    offset = (page - 1) * page_size
+    query = stmt.offset(offset).limit(page_size)
 
     result = await db.execute(query)
     equipment_list = result.scalars().all()
@@ -72,6 +74,7 @@ async def drop_equipment(equipment_id, db: AsyncSession):
     if equipment is None:
         raise HTTPException(status_code=404, detail="器材不存在")
     await db.delete(equipment)
+    await db.commit()
     return True
 
 
@@ -83,8 +86,10 @@ async def add_repair(equipment_id, repair_info: EquipmentRepairRequest, db: Asyn
         raise HTTPException(status_code=404, detail="器材不存在")
     equipment_repair = Repair(equipment_id=equipment_id, **repair_info.model_dump())
     db.add(equipment_repair)
+    equipment.status = '维修'
     await db.commit()
     await db.refresh(equipment_repair)
+    await db.refresh(equipment)
     return equipment_repair
 
 async def add_maintenance(equipment_id, maintenance_info: EquipmentMaintenanceRequest, db: AsyncSession):
@@ -93,10 +98,13 @@ async def add_maintenance(equipment_id, maintenance_info: EquipmentMaintenanceRe
     equipment = result.scalar_one_or_none()
     if equipment is None:
         raise HTTPException(status_code=404, detail="器材不存在")
-    equipment_maintenance = MaintenanceRecord(equipment_id,**maintenance_info.model_dump())
+    equipment_maintenance = MaintenanceRecord(equipment_id=equipment_id,**maintenance_info.model_dump())
     db.add(equipment_maintenance)
     await db.commit()
     await db.refresh(equipment_maintenance)
+
     return equipment_maintenance
+
+
 
 

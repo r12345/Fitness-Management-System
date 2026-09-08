@@ -10,7 +10,7 @@ from ...crud.coach_panel import get_my_schedule, create_schedule
 from ...crud.training import list_my_plans, create_plan, update_plan
 from ...models import Coach, User
 from ...schemas.coach_panel import ScheduleCreate
-from ...schemas.training import PlanCreate, PlanUpdate, PlanItem
+from ...schemas.training import PlanCreate, PlanUpdate, PlanItem, PlanItemSelf
 from ...utils.res import success_response
 
 
@@ -67,7 +67,7 @@ async def list_coach_plans(
     """14.1 训练计划列表（当前教练创建的）。"""
     coach = await _get_current_coach(db, user)
     plans = await list_my_plans(db, coach.id)
-    return success_response(data=[PlanItem.model_validate(p).model_dump(mode="json") for p in plans])
+    return success_response(data=[PlanItemSelf.model_validate(p).model_dump(mode="json") for p in plans])
 
 
 @coach_panel_router.post('/plans')

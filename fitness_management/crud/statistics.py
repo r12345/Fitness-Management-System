@@ -2,9 +2,9 @@ from datetime import datetime, timedelta
 from sqlalchemy import select, func, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from fitness_management.models import Coach, TrainPlan, Member
+from fitness_management.models import Coach, TrainPlan, Member, Equipment
 from fitness_management.schemas.statistics import StatisticsResponse, MemberCardDistributionResponse, \
-    MemberStatisticsResponse
+    MemberStatisticsResponse, EquipmentStatisticsResponse, EquipmentStatus
 
 
 async def get_coaches_statistics(db: AsyncSession, period: str = None):
@@ -95,3 +95,17 @@ async def get_members_statistics(db: AsyncSession, period: str = None):
     return MemberStatisticsResponse(activate_members=activate_members, card_distribution=card_distribution)
 
 
+async def get_equipments_statistics(db: AsyncSession):
+
+    query1 = select(func.count(Equipment.id))
+    result1 = await db.execute(query1)
+    total = result1.scalar_one_or_none()
+    if total is None:
+        total = 0
+    query = select(Equipment.status,func.count(Equipment.status)).group_by(Equipment.status)
+    result = await db.execute(query)
+    rows = result.all()
+    status_type = []
+    for row in rows:
+        status_type.append(EquipmentStatus(status=row[0], count=row[1]))
+    return EquipmentStatisticsResponse(total = total, status_type=status_type)
