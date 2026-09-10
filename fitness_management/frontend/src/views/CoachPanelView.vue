@@ -10,7 +10,7 @@
         <p class="page-desc">查看排课、学员、授课记录并制定训练计划。</p>
       </div>
       <div class="page-actions">
-        <button class="btn btn-primary" type="button" @click="openPlan(null)">新增排课</button>
+        <button class="btn btn-primary" type="button" @click="openSchedule()">新增排课</button>
       </div>
     </div>
 
@@ -233,6 +233,7 @@ import { getSchedules, addSchedule } from "../api/coach";
 import { list_courses } from "../api/courses";
 import StatCard from "../components/StatCard.vue";
 import { create_training_plan, list_my_plans, update_training_plan } from "../api/coach-panel.js";
+import {create_schedule, list_schedule} from "../api/schedule.js";
 
 const toast = useToast();
 const activeTab = ref("schedule");
@@ -287,7 +288,8 @@ async function get_plans_list() {
 
 async function loadSchedules() {
   try {
-    const res = await getSchedules();
+    const res = await list_schedule();
+    console.log(res)
     if (res.code === 0) {
       schedules.value = res.data || [];
     }
@@ -323,7 +325,7 @@ async function saveSchedule() {
     return;
   }
   try {
-    const res = await addSchedule({
+    const res = await create_schedule({
       course_id: scheduleForm.course_id,
       schedule_date: scheduleForm.schedule_date,
       start_time: scheduleForm.start_time + ":00",

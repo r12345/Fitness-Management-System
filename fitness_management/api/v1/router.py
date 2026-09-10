@@ -31,3 +31,9 @@ from fitness_management.api.v1 import consumption
 
 statistics_router = APIRouter(prefix='/api/v1/statistics', tags=['运营数据'])
 from fitness_management.api.v1 import statistics
+
+schedule_router = APIRouter(prefix='/api/v1/schedule', tags=['排班管理'])
+from fitness_management.api.v1 import schedule
+
+system_router = APIRouter(prefix='/api/v1/system', tags=['系统配置、日志与字典'])
+from fitness_management.api.v1 import system
