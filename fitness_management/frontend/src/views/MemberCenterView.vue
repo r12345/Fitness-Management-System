@@ -15,7 +15,7 @@
       <div class="panel">
         <div class="panel-body">
           <div class="page-actions">
-            <span class="user-avatar" style="width: 56px; height: 56px; font-size: 22px;">{{ shortName }}</span>
+            <span class="user-avatar" style="width: 56px; height: 56px; font-size: 22px;">{{ profile.name }}</span>
             <div>
               <h2 style="margin: 0;">789</h2>
               <div class="page-desc">会员编号 M1001 · 年卡</div>
@@ -24,8 +24,8 @@
         </div>
         <div class="panel-body" style="border-top: 1px solid var(--border);">
           <div class="stat-grid" style="grid-template-columns: 1fr; margin-bottom: 0;">
-            <div class="stat-card"><div><div class="stat-card-value">456</div><div class="stat-card-label">到期时间</div></div></div>
-            <div class="stat-card"><div><div class="stat-card-value">123</div><div class="stat-card-label">账户余额</div></div></div>
+            <div class="stat-card"><div><div class="stat-card-value">{{ profile_info.card_expire}}</div><div class="stat-card-label">到期时间</div></div></div>
+            <div class="stat-card"><div><div class="stat-card-value">{{ profile_info.balance }}</div><div class="stat-card-label">账户余额</div></div></div>
           </div>
         </div>
       </div>
@@ -35,12 +35,12 @@
           <h2 class="panel-title">近期安排</h2>
         </div>
         <div class="panel-body">
-          <div v-for="item in upcoming" :key="item.name" class="course-card" style="margin-bottom: 12px;">
+          <div v-for="item in myCourses" :key="item.id" class="course-card" style="margin-bottom: 12px;">
             <div class="course-card-top">
-              <h3>{{ item.name }}</h3>
-              <span class="badge" :class="item.tone">{{ item.tag }}</span>
+              <h3>{{ item.course.name }}</h3>
+              <span class="badge" :class="item.tone">{{ item.status }}</span>
             </div>
-            <div class="course-card-meta"><span>{{ item.meta }}</span></div>
+            <div class="course-card-meta"><span>{{ formatTime(item.course.start_time) }}</span></div>
           </div>
         </div>
       </div>
@@ -66,8 +66,8 @@
             <thead><tr><th>课程</th><th>上课时间</th><th>教练</th><th>状态</th><th>操作</th></tr></thead>
             <tbody>
               <tr v-for="(item, index) in appointments" :key="index">
-                <td>{{ item.course }}</td><td>{{ item.time }}</td><td>{{ item.coach }}</td>
-                <td><span class="badge" :class="item.status === '已完成' ? 'success' : item.status === '已取消' ? 'muted' : 'info'">{{ item.status }}</span></td>
+                <td>{{ item.course.name }}</td><td>{{ formatTime(item.course.start_time) }}</td><td>{{ item.course?.coach?.name }}</td>
+                <td><span class="badge"  >{{ item.status}}</span></td>
                 <td><button v-if="item.status === '已预约'" class="btn btn-danger btn-sm" type="button" @click="cancel(index)">取消预约</button></td>
               </tr>
             </tbody>
@@ -78,8 +78,8 @@
       <div v-else-if="activeTab === 'courses'" class="panel-body">
         <div class="course-cards">
           <div v-for="item in myCourses" :key="item.name" class="course-card">
-            <div class="course-card-top"><h3>{{ item.name }}</h3><span class="badge info">{{ item.tag }}</span></div>
-            <div class="course-card-meta"><span>{{ item.meta }}</span></div>
+            <div class="course-card-top"><h3>{{ item.course.name }}</h3><span class="badge info">{{ item.course.coach.name }}</span></div>
+            <div class="course-card-meta"><span>{{ formatTime(item.course.start_time) }}</span></div>
           </div>
         </div>
       </div>
@@ -221,12 +221,11 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref } from "vue";
+import { computed, reactive, ref,onMounted } from "vue";
 import { useToast } from "../composables/useToast";
-import { memberAppointments, trainingRecords } from "../data/mock";
+import {getMyAppointments, getMyCourses, editProfile, get_member_info} from "../api/member-center.js"
 import TrendChart from "../components/TrendChart.vue";
 
-import { onMounted} from  "vue";
 import {
   create_checkin,
   leave_checkin,
@@ -240,7 +239,6 @@ import {useCheckinStore} from '../stores/checkin.js'
 const userStore = useUserStore()
 const checkinStore = useCheckinStore()
 const toast = useToast();
-const userName =  "王琳";
 const activeTab = ref("appointments");
 const tabs = [
   { key: "appointments", label: "我的预约" },
@@ -253,24 +251,23 @@ const upcoming = [
   { name: "哈他瑜伽", tag: "即将开始", tone: "warn", meta: "今天 19:30 - 20:30 · 刘洋" },
   { name: "一对一塑形", tag: "已预约", tone: "info", meta: "08月29日 15:00 · 张昊" }
 ];
-const appointments = ref(memberAppointments.map((item) => ({ ...item })));
-const myCourses = [
-  { name: "哈他瑜伽", tag: "已预约", meta: "周一 19:30 · 刘洋" },
-  { name: "一对一塑形", tag: "已预约", meta: "私教课 · 张昊" },
-  { name: "燃脂有氧操", tag: "已完成", meta: "周三 18:00 · 孙悦" }
-];
+const appointments = ref([]);
+const myCourses = ref([])
 const checkins = ref([]);
 const profile = reactive({
-  name: userName,
-  phone: "13800000001",
-  height: 168,
-  weight: 56.4
+  name: null,
+  phone: null,
+  height: null,
+  weight: null
 });
 
-// 删掉旧的无效computed
-const shortName = computed(() => {
-  return userStore.role_name
+const profile_info = ref({
+  card_expire:null,
+  balance:null
 })
+
+// 删掉旧的无效computed
+
 const trainRecords = ref([]);
 
 const categories = ref([])
@@ -287,6 +284,18 @@ const statData = ref({
   }
 })
 
+const formatTime = (str) => {
+  if (!str) return ''
+  const d = new Date(str)
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  const h = String(d.getHours()).padStart(2, '0')
+  const mi = String(d.getMinutes()).padStart(2, '0')
+  const s = String(d.getSeconds()).padStart(2, '0')
+  return `${y}年${m}月${day}日 ${h}:${mi}:${s}`
+}
+
 // ✅ 切换周期调用这个函数，把queryPeriod传给接口
 async function fetchTrainingStat(){
   const res = await get_training_statistics(queryPeriod.value)
@@ -300,6 +309,46 @@ async function fetchTrainingStat(){
     }
   ]
 }
+
+async function member_info(){
+  const res = await get_member_info()
+  console.log(res.data)
+  profile.name = res.data.name
+  profile.phone = res.data.phone
+  profile.height = res.data.height
+  profile.weight = res.data.weight
+  profile_info.value.card_expire = res.data.card_expire
+  profile_info.value.balance = res.data.balance
+}
+
+async function saveProfile(){
+  const res = await editProfile(profile)
+  console.log(res.data)
+  console.log(profile_info)
+  profile.height = res.data.height
+  profile.weight = res.data.weight
+  profile.phone = res.data.phone
+  profile.name = res.data.name
+  toast.show("修改成功")
+}
+async function get_Appointments(){
+  const res = await getMyAppointments(userStore.role_id)
+  console.log(res.data)
+  appointments.value = res.data
+}
+
+async function get_courses(){
+  const res = await getMyCourses(userStore.role_id)
+  console.log(res.data)
+  myCourses.value = res.data
+}
+
+
+onMounted(async ()=>{
+  await get_Appointments()
+  await get_courses()
+  await member_info()
+})
 
 //弹窗开关
 const showTrainDialog = ref(false)
@@ -370,6 +419,7 @@ async function member_leave(){
     const res = await leave_checkin(checkinStore.checkin_info.checkin_id,checkinStore.leave_time);
     console.log(res)
     await memberCheckInList()
+    await get_training_statistics()
   }catch (error) {
     console.log(error)
   }
@@ -392,9 +442,7 @@ function cancel(index) {
   toast.show("预约已取消");
 }
 
-function saveProfile() {
-  toast.show("个人信息已保存");
-}
+
 </script>
 
 <style scoped>
