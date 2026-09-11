@@ -99,7 +99,9 @@ const handleLogin= async()=> {
     userStore.setToken(res.data.token);
     userStore.setRole(res.data.role);
     userStore.setRoleName(res.data.role_name);
-    router.push('/dashboard');
+    userStore.setUserId(res.data.user_id)
+    userStore.set_role_id(res.data.role_id)
+    router.push(res.data.home);
   } else {
     notice.value = res.message;
   }

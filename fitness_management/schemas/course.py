@@ -14,9 +14,10 @@ class CourseCreate(BaseModel):
     course_type: str = Field(..., description="团课 group / 私教 private")
     category: Optional[str] = Field(None, description="课程分类")
     coach_id: int = Field(..., description="教练编号")
-    start_time: Optional[datetime] = Field(None, description="上课时间")
+    start_time: Optional[str] = Field(None, description='上课时间，如 "周三 18:00"')
     duration: int = Field(..., description="时长（分钟）")
     max_count: Optional[int] = Field(None, description="最大人数（私教可为空）")
+    capacity: Optional[int] = Field(None, description="私教会员名额")
     price: Decimal = Field(..., description="价格")
     status: str = Field("已上架", description="课程状态")
 
@@ -27,9 +28,10 @@ class CourseUpdate(BaseModel):
     course_type: Optional[str] = None
     category: Optional[str] = None
     coach_id: Optional[int] = None
-    start_time: Optional[datetime] = None
+    start_time: Optional[str] = None
     duration: Optional[int] = None
     max_count: Optional[int] = None
+    capacity: Optional[int] = None
     price: Optional[Decimal] = None
     status: Optional[str] = None
 

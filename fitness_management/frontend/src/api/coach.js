@@ -1,17 +1,21 @@
+// 教练管理接口（接口文档 §9）
+// 教练工作台相关接口见 ./coach-panel.js
 import request from './request';
-export function getCoachList(data) {
-    return request({
-        url: '/coaches/',
-        method: 'get',
-        params:{
-            keyword:data.keyword,
-            status:data.status,
-            specialty:data.specialty,
-            page:data.page,
-            page_size:data.page_size
 
-        }
-    })
+//9.1 教练分页列表
+export function getCoachList(data) {
+  return request({
+    url: '/coaches/',
+    method: 'get',
+    params:{
+        keyword:data.keyword,
+        status:data.status,
+        specialty:data.specialty,
+        page:data.page,
+        page_size:data.page_size
+
+    }
+  })
 }
 
 //9.2 新增教练

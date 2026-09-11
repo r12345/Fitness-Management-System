@@ -18,6 +18,7 @@ class Course(Base):
     coach_id: Mapped[int] = mapped_column(
         ForeignKey("coach.id", ondelete="CASCADE"), nullable=False, comment="教练"
     )
+    # 数据库中该列实际为 varchar(64)，取值形如 "周一 19:30" 或 "19:30:00"
     start_time: Mapped[Optional[str]] = mapped_column(String(64), nullable=True, comment="上课时间")
     duration: Mapped[int] = mapped_column(nullable=False, comment="时长")
     max_count: Mapped[Optional[int]] = mapped_column(nullable=True, comment="最大人数")

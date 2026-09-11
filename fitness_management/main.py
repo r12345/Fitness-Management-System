@@ -1,16 +1,28 @@
 """FastAPI 主入口。"""
 import uvicorn
 from fastapi import FastAPI
-from fitness_management.core.database import async_engine
-import fitness_management.models as models  # 导入models模块，确保模型类被注册到Base的metadata中
-from fitness_management.api.v1.router import user_router, members_router, member_center_router, courses_router, \
-    coach_panel_router
-from core.database import async_engine
-import models  # 导入您的models模块，确保模型类被注册到Base的metadata中
-from fitness_management.api.v1.router import user_router, members_router, member_center_router, coaches_router
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI()
+import fitness_management.models  # noqa: F401  导入models模块，确保模型类被注册到Base的metadata中
+from fitness_management.api.v1.router import (
+    appointments_router,
+    coach_panel_legacy_router,
+    coach_panel_router,
+    coaches_router,
+    consumptions_router,
+    courses_router,
+    equipment_router,
+    member_center_router,
+    members_router,
+    schedule_router,
+    statistics_router,
+    system_router,
+    training_router,
+    user_router,
+)
+from fitness_management.utils.res import BizError, biz_error_handler
+
+app = FastAPI(title="健身管理系统")
 
 app.include_router(user_router)
 app.include_router(members_router)
@@ -18,16 +30,26 @@ app.include_router(member_center_router)
 app.include_router(courses_router)
 app.include_router(coaches_router)
 app.include_router(coach_panel_router)
+app.include_router(coach_panel_legacy_router)
+app.include_router(appointments_router)
+app.include_router(training_router)
+app.include_router(equipment_router)
+app.include_router(statistics_router)
+app.include_router(consumptions_router)
+app.include_router(schedule_router)
+app.include_router(system_router)
 
-
+# 业务异常统一转换为 {"code", "msg", "data"} 响应
+app.add_exception_handler(BizError, biz_error_handler)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  #开发环境允许全部来源，生产不要*
+    allow_origins=["*"],  # 开发环境允许全部来源，生产不要*
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 # 在应用启动时创建所有定义的表
 # async def create_tables():
 #     async with async_engine.begin() as conn:

@@ -2,7 +2,7 @@
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from fitness_management.crud.user import check_user_exists, register_user, login_user
+from fitness_management.crud.user import check_user_exists, register_user, login_user, get_role_id
 from fitness_management.schemas.auth import AuthRequest, UserInfoRequest
 
 from .router import user_router
@@ -22,11 +22,14 @@ async def login(user_info:AuthRequest,db=Depends(get_db)):
     if user is None:
         return {"message": "密码错误或身份错误"}
     token = create_access_token(subject=str(user.id))
+    role_id = await get_role_id(user, db)
     return success_response(msg='success',data={
         'token': token,
         'role':user.role,
+        'role_id':role_id,
         'role_name': user.name,
-        'home':'/dashboard'
+        'home':'/dashboard',
+        'user_id':user.id,
     })
 
 
