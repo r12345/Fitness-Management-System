@@ -11,6 +11,7 @@ class StatisticsResponse(BaseModel):
     hours : int
     student_count: int
     revenue : float
+    course_count: int
     average_score : float
 
 

@@ -47,13 +47,20 @@ export function update_training_plan(plan_id, data) {
   });
 }
 
-// 19.1 我的排课
-export function getSchedules() {
+
+export function get_records() {
   return request({
-    url: "/coach_panel/schedules",
+    url: "/coach_panel/records",
     method: "get"
   });
 }
+export function get_member() {
+  return request({
+    url: "/coach_panel/students",
+    method: "get"
+  });
+}
+
 
 // 19.2 新增排课
 export function addSchedule(data) {

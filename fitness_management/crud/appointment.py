@@ -12,8 +12,9 @@ from datetime import date as date_type
 from datetime import datetime, time as time_type, timedelta
 from typing import Optional, Tuple
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, and_, or_
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload
 
 from fitness_management.models import Appointment, Coach, Course, Member
 from fitness_management.schemas.appointment import AppointmentCreate
@@ -53,11 +54,10 @@ def _apply_release_quota(course: Optional[Course], delta: int) -> None:
 # ===== 12.1 预约分页列表 =====
 
 async def list_appointments(
+    keyword:str,
     db: AsyncSession,
     page: int = 1,
     page_size: int = 10,
-    member_id: Optional[int] = None,
-    course_id: Optional[int] = None,
     status: Optional[str] = None,
     date_: Optional[date_type] = None,
 ) -> Tuple[list[dict], int]:
@@ -81,10 +81,15 @@ async def list_appointments(
         .outerjoin(Coach, Coach.id == Course.coach_id)
     )
 
-    if member_id is not None:
-        stmt = stmt.where(Appointment.member_id == member_id)
-    if course_id is not None:
-        stmt = stmt.where(Appointment.course_id == course_id)
+    if keyword is not None and keyword.strip() != "":
+        stmt = stmt.where(
+            or_(
+                Member.name.ilike(f"%{keyword}%"),  # 会员姓名
+                Course.name.ilike(f"%{keyword}%"),  # 课程名称
+                Coach.name.ilike(f"%{keyword}%")  # 教练姓名
+            )
+        )
+
     if status:
         stmt = stmt.where(Appointment.status == status)
     if date_:

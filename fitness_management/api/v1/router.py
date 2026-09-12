@@ -71,3 +71,9 @@ from fitness_management.api.v1 import schedule
 
 system_router = APIRouter(prefix='/api/v1/system', tags=['系统配置、日志与字典'])
 from fitness_management.api.v1 import system
+
+dashboard_router = APIRouter(prefix='/api/v1/dashboard', tags=['管理员数据大盘'])
+from fitness_management.api.v1 import dashboard
+
+reception_router = APIRouter(prefix='/api/v1/reception', tags=['前台管理'])
+from fitness_management.api.v1 import reception

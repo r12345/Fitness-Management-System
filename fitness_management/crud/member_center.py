@@ -22,7 +22,7 @@ async def get_appointment_by_id(id:int,db:AsyncSession):
 
 
 async def get_courses_by_id(id:int,db:AsyncSession):
-    query = (select(Appointment).options(selectinload(Appointment.course).options(selectinload(Course.coach))).where(and_(Appointment.member_id ==id,Appointment.status == '已预约')))
+    query = (select(Appointment).options(selectinload(Appointment.course).options(selectinload(Course.coach))).where(and_(Appointment.member_id ==id,Appointment.status == '已签到')))
     result = await db.execute(query)
     return result.scalars().all()
 

@@ -1,4 +1,5 @@
 """课程管理接口。"""
+from datetime import datetime
 from typing import Optional
 
 from fastapi import Depends, HTTPException, Query
@@ -22,10 +23,10 @@ from fitness_management.utils.res import success_response
 _WEEKDAYS = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
 
 
-def _fmt_start_time(dt) -> Optional[str]:
-    """将 datetime 格式化为 "周X HH:MM"。"""
-    if not dt:
-        return None
+def _fmt_start_time(dt):
+    # 兼容字符串：如果是字符串，先转成 datetime 对象
+    if isinstance(dt, str):
+        dt = datetime.strptime(dt, "%Y-%m-%d %H:%M:%S")
     return f"{_WEEKDAYS[dt.weekday()]} {dt.strftime('%H:%M')}"
 
 

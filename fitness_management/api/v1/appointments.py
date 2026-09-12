@@ -39,8 +39,7 @@ async def _get_current_member_id(db: AsyncSession, user: User) -> int:
 
 @appointments_router.get("", response_model=AppointmentPageResponse, summary="预约分页列表")
 async def list_appointments_api(
-    member_id: Optional[int] = Query(None, description="会员编号"),
-    course_id: Optional[int] = Query(None, description="课程编号"),
+    keyword: Optional[str] = Query(None, description="关键词：会员姓名/课程名称"),
     status: Optional[str] = Query(None, description="预约状态：已预约/已签到/已完成/已取消"),
     date_: Optional[date_type] = Query(None, alias="date", description="预约日期"),
     page: int = Query(1, ge=1, description="页码"),
@@ -59,8 +58,7 @@ async def list_appointments_api(
         db=db,
         page=page,
         page_size=page_size,
-        member_id=member_id,
-        course_id=course_id,
+        keyword=keyword,
         status=status,
         date_=date_,
     )

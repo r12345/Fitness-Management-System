@@ -138,6 +138,14 @@
               <input v-model="coachForm.hire_date" type="date" />
             </div>
             <div class="field">
+              <label>课时</label>
+              <input v-model.number="coachForm.hours" type="number" step="1"/>
+            </div>
+            <div class="field">
+              <label>评分</label>
+              <input v-model.number="coachForm.score" type="number" step="0.1"/>
+            </div>
+            <div class="field">
               <label>状态</label>
               <select v-model="coachForm.status">
                 <option value="在职">在职</option>
@@ -183,6 +191,7 @@ import StatCard from "../components/StatCard.vue";
 import { ElPagination } from "element-plus";
 import { reactive, ref, onMounted, watch } from "vue";
 import { getCoachList, addCoach, updateCoach, deleteCoach, getCoachStat } from "../api/coach";
+import {getCoachStatistics} from '../api/statistics.js'
 import { useToast } from "../composables/useToast";
 
 const toast = useToast();
@@ -197,7 +206,7 @@ const queryForm = ref({
 
 const list = ref([]);
 const total = ref(0);
-
+const summary= ref({});
 const stat_total_coach = ref(0);
 const stat_today_course = ref(0);
 const stat_sum_hours = ref(0);
@@ -212,6 +221,8 @@ const coachForm = reactive({
   specialties: '',
   salary:0,
   hire_date: "",
+  hours:0,
+  score:0,
   status: "在职",
 });
 
@@ -240,6 +251,8 @@ watch(
     }, SEARCH_DELAY);
   }
 );
+
+
 
 // 关闭弹窗
 function closeCoachModal() {
@@ -307,6 +320,7 @@ async function saveCoach() {
       await updateCoach(editCoachId.value, submitData);
       toast.show("修改保存成功");
     }else{
+      console.log(submitData)
       await addCoach(submitData);
       toast.show("教练新增成功");
     }

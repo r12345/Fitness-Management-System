@@ -69,22 +69,25 @@ const MODULES = {
     { path: "/equipment", label: "器材管理" },
     { path: "/system", label: "系统配置" },
     { path: "/member", label: "会员个人中心" },
-    { path: "/coach", label: "教练工作台" }
+    { path: "/coach", label: "教练工作台" },
+      { path: "/appointments", label: "预约" }
   ],
   reception: [
     { path: "/reception", label: "前台工作台" },
     { path: "/members", label: "会员开卡续费" },
-    { path: "/courses", label: "预约处理" },
+    { path: "/courses", label: "课程" },
     { path: "/equipment", label: "器材报修" },
-    { path: "/dashboard", label: "运营概览" }
+    { path: "/dashboard", label: "运营概览" },
+    { path: "/appointments", label: "预约" }
   ],
   coach: [
     { path: "/coach", label: "我的工作台" },
-    { path: "/courses", label: "课程中心" }
+    { path: "/courses", label: "课程中心" },
+    { path: "/appointments", label: "预约" }
   ],
   member: [
     { path: "/member", label: "个人中心" },
-    { path: "/courses", label: "预约课程" }
+    { path: "/courses", label: "课程" }
   ]
 };
 

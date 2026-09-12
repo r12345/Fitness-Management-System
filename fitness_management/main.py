@@ -18,7 +18,7 @@ from fitness_management.api.v1.router import (
     statistics_router,
     system_router,
     training_router,
-    user_router,
+    user_router, dashboard_router, reception_router,
 )
 from fitness_management.utils.res import BizError, biz_error_handler
 
@@ -38,6 +38,8 @@ app.include_router(statistics_router)
 app.include_router(consumptions_router)
 app.include_router(schedule_router)
 app.include_router(system_router)
+app.include_router(dashboard_router)
+app.include_router(reception_router)
 
 # 业务异常统一转换为 {"code", "msg", "data"} 响应
 app.add_exception_handler(BizError, biz_error_handler)

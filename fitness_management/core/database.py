@@ -14,7 +14,6 @@ async_engine = create_async_engine(
     echo=False,  # 打印SQL语句，便于调试
     pool_size=5,  # 连接池大小
     max_overflow=10,  # 超过连接池大小外可创建的最大连接数
-    pool_pre_ping=True,  # 使用前探活，避免连接被 MySQL 回收后报错
 )
 
 # 创建异步会话工厂

@@ -116,11 +116,13 @@
               </select></div>
             <div class="field"><label>时长(分钟)</label><input v-model.number="courseForm.duration" type="number"></div>
             <div class="field"><label>价格</label><input v-model.number="courseForm.price" type="number"></div>
+            <div class="field"><label>开始时间</label><input v-model="courseForm.start_time" type="datetime-local"></div>
             <div class="field"><label>课程类型</label><select v-model="courseForm.course_type">
               <option value="group">group 团课</option>
               <option value="private">private 私教</option>
             </select></div>
-            <div class="field"><label>最大人数</label><input v-model.number="courseForm.max_count" type="number"></div>
+             <div class="field"><label>最大人数</label><input v-model.number="courseForm.max_count" type="number"></div>
+            <div class="field"><label>私教会员名额</label><input v-model.number="courseForm.capacity" type="number"></div>
             <div class="field">
               <label>状态</label>
               <select v-model="courseForm.status">
@@ -207,6 +209,7 @@ const courseForm = ref({
   start_time: null,
   duration: null,
   max_count: null,
+  capacity:null,
   price: null,
   status: "已上架"
 });
@@ -301,6 +304,7 @@ function openAdd() {
   form.category = null;
   form.course_type = activeTab.value === "group" ? 'group' : 'private';
   form.max_count = null;
+  form.capacity = null;
   form.status = "已上架";
   form.start_time = null;
   showAdd.value = true;
@@ -324,7 +328,16 @@ function openEdit(rowItem) {
   };
   showAdd.value = true;
 }
-
+// 格式化本地北京时间 YYYY-MM-DD HH:mm:ss
+function formatLocalDateTime(dateObj) {
+  const year = dateObj.getFullYear();
+  const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+  const day = String(dateObj.getDate()).padStart(2, '0');
+  const hour = String(dateObj.getHours()).padStart(2, '0');
+  const minute = String(dateObj.getMinutes()).padStart(2, '0');
+  const second = String(dateObj.getSeconds()).padStart(2, '0');
+  return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
+}
 // 保存：新增 OR 更新
 async function saveCourse() {
   try {
@@ -334,8 +347,10 @@ async function saveCourse() {
       course_type: form.course_type,
       category: form.category,
       coach_id: Number(form.coach_id),
+      start_time: form.start_time,
       duration: Number(form.duration),
       max_count: Number(form.max_count),
+      capacity: Number(form.capacity),
       price: Number(form.price),
       status: form.status
     };
@@ -346,7 +361,8 @@ async function saveCourse() {
       toast.show("课程已更新");
     } else {
       // 新增模式 POST
-      submitData.start_time = new Date().toISOString();
+      const d = new Date(submitData.start_time);
+    submitData.start_time = formatLocalDateTime(d);
       await create_courses(submitData);
       toast.show("课程已新增");
     }
@@ -362,6 +378,7 @@ async function saveCourse() {
       start_time: null,
       duration: null,
       max_count: null,
+      capacity: null,
       price: null,
       status: "已上架"
     };

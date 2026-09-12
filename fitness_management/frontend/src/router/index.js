@@ -11,6 +11,7 @@ import EquipmentView from "../views/EquipmentView.vue";
 import SystemView from "../views/SystemView.vue";
 import MemberCenterView from "../views/MemberCenterView.vue";
 import CoachPanelView from "../views/CoachPanelView.vue";
+import AppointmentList from "../views/AppointmentList.vue";
 
 const routes = [
   {
@@ -51,7 +52,7 @@ const routes = [
         path: "courses",
         name: "courses",
         component: CoursesView,
-        meta: { roles: ["admin", "reception", "coach", "member"], title: "课程与预约" }
+        meta: { roles: ["admin", "reception", "coach", "member"], title: "课程" }
       },
       {
         path: "equipment",
@@ -76,7 +77,14 @@ const routes = [
         name: "coach",
         component: CoachPanelView,
         meta: { roles: ["admin", "coach"], title: "教练工作台" }
+      },
+      {
+        path: "appointments",
+        name: "appointment",
+        component: AppointmentList,
+        meta: { roles: ["admin", "coach", "reception"], title: "预约管理" }
       }
+
     ]
   },
   {

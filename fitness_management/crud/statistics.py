@@ -2,12 +2,12 @@ from datetime import datetime, timedelta
 from sqlalchemy import select, func, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from fitness_management.models import Coach, TrainPlan, Member, Equipment
+from fitness_management.models import Coach, TrainPlan, Member, Equipment, Course, Appointment, Schedule, User
 from fitness_management.schemas.statistics import StatisticsResponse, MemberCardDistributionResponse, \
     MemberStatisticsResponse, EquipmentStatisticsResponse, EquipmentStatus
 
 
-async def get_coaches_statistics(db: AsyncSession, period: str = None):
+async def get_coaches_statistics(db: AsyncSession, period: str = None,coach_id: int = None):
     """获取教练统计数据。period可选：today / week / month / year / None(全部)"""
     base_select = select(
         Coach.id.label('coach_id'),
@@ -16,8 +16,9 @@ async def get_coaches_statistics(db: AsyncSession, period: str = None):
         # distinct 去重：同一个会员多条计划只统计一次
         func.count(func.distinct(TrainPlan.member_id)).label("student_count"),
         Coach.salary.label('revenue'),
+        func.count(func.distinct(Schedule.id)).label('course_count'),
         func.avg(Coach.score).label('average_score')
-    )
+    ).outerjoin(Schedule, Schedule.coach_id == Coach.id).where(Coach.id ==coach_id)
 
     if period:
         now = datetime.now()
@@ -109,3 +110,10 @@ async def get_equipments_statistics(db: AsyncSession):
     for row in rows:
         status_type.append(EquipmentStatus(status=row[0], count=row[1]))
     return EquipmentStatisticsResponse(total = total, status_type=status_type)
+
+
+async def get_current_coach(db:AsyncSession,user:User):
+    query = select(Coach).where(Coach.user_id == user.id)
+    result = await db.execute(query)
+    coach = result.scalar_one_or_none()
+    return coach

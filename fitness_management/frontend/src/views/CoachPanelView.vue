@@ -15,10 +15,10 @@
     </div>
 
     <div class="stat-grid">
-      <StatCard label="本月排课" value="18" unit="节" icon="排" />
-      <StatCard label="已授课时" value="42" unit="课时" icon="课" />
-      <StatCard label="我的学员" value="16" unit="人" icon="学" />
-      <StatCard label="平均评分" value="4.9" unit="分" icon="分" />
+      <StatCard label="本月排课" v-model:value="summary.course_count" unit="节" icon="排" />
+      <StatCard label="已授课时" v-model:value="summary.hours" unit="课时" icon="课" />
+      <StatCard label="我的学员" v-model:value="summary.student_count" unit="人" icon="学" />
+      <StatCard label="平均评分" v-model:value="summary.average_score" unit="分" icon="分" />
     </div>
 
     <div class="panel">
@@ -91,8 +91,8 @@
                 <td>{{ item.name }}</td>
                 <td>{{ item.phone }}</td>
                 <td>{{ item.goal }}</td>
-                <td>{{ item.plan }}</td>
-                <td>{{ item.recent }}</td>
+                <td>{{ item.current_plan }}</td>
+                <td>{{ item.recent_training }}</td>
                 <td>
                   <button class="btn btn-secondary btn-sm" type="button" @click="openPlan(item)">制定计划</button>
                 </td>
@@ -112,7 +112,7 @@
                 <th>学员</th>
                 <th>课时</th>
                 <th>评分</th>
-                <th>评价</th>
+                <th>签到人数</th>
               </tr>
             </thead>
             <tbody>
@@ -231,8 +231,16 @@ import { useToast } from "../composables/useToast";
 import { coachStudents } from "../data/mock";
 import { list_courses } from "../api/courses";
 import StatCard from "../components/StatCard.vue";
-import { create_training_plan, list_my_plans, update_training_plan } from "../api/coach-panel.js";
+import {
+  create_training_plan,
+  list_my_plans,
+  update_training_plan,
+  get_records,
+  addSchedule,
+  get_member
+} from "../api/coach-panel.js";
 import {create_schedule, list_schedule} from "../api/schedule.js";
+import {getCoachStatistics} from "../api/statistics.js";
 
 const toast = useToast();
 const activeTab = ref("schedule");
@@ -244,11 +252,8 @@ const tabs = [
 ];
 const schedules = ref([]);
 const courseOptions = ref([]);
-const students = ref(coachStudents.map((item) => ({ ...item })));
-const records = [
-  { date: "2026-08-26", course: "增肌基础课", student: "王琳", hours: "1 课时", score: "5.0", comment: "动作执行标准" },
-  { date: "2026-08-25", course: "一对一塑形", student: "陈晨", hours: "2 课时", score: "4.9", comment: "训练强度合适" }
-];
+const students = ref([]);
+const records = ref([]);
 const plans = ref([]);
 const showSchedule = ref(false);
 const showPlan = ref(false);
@@ -285,6 +290,19 @@ async function get_plans_list() {
   }
 }
 
+async function get_Schedules(){
+  const res = await get_records();
+  records.value = res.data;
+  console.log(res)
+}
+
+async function get_my_member(){
+  const res = await get_member();
+  students.value = res.data;
+  console.log(res)
+}
+
+
 async function loadSchedules() {
   try {
     const res = await list_schedule();
@@ -307,11 +325,28 @@ async function loadCourses() {
     console.error("加载课程列表失败", e);
   }
 }
+const summary = ref({
+  average_score:null,
+  course_count:null,
+  student_count:null,
+  hours:null
+})
+async function get_summary() {
+  const res = await getCoachStatistics()
+  summary.value.average_score = res.data[0].average_score
+  summary.value.course_count = res.data[0].course_count
+  summary.value.student_count = res.data[0].student_count
+  summary.value.hours = res.data[0].hours
+  console.log(res)
+}
 
 onMounted(async () => {
   await loadSchedules();
   await loadCourses();
   await get_plans_list();
+  await get_Schedules();
+  await get_my_member();
+  await get_summary();
 });
 
 function openSchedule() {

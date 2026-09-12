@@ -6,3 +6,11 @@ export function getEquipmentStatistics() {
     })
 }
 
+export function getCoachStatistics() {
+    return request({
+        url: `/statistics/coaches`,
+        method: 'get'
+    })
+}
+
+

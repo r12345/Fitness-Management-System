@@ -35,9 +35,11 @@ class CoachPageResponse(BaseModel):
 class CoachCreate(BaseModel):
     name: str
     phone: str
-    specialties: List[str]
+    specialties: str
     salary: float
     hire_date: date
+    hours: int
+    score: float
     status: str
 
 # 更新教练：所有字段可选
