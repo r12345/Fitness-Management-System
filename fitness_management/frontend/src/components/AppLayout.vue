@@ -35,7 +35,7 @@
         </div>
         <div class="topbar-right">
           <div class="user-chip">
-            <span>{{ useStore.role_name }} · {{ useStore.role }}</span>
+            <span>{{ useStore.role_name }} · {{ roleLabel }}</span>
           </div>
           <button class="btn btn-secondary btn-sm" type="button" @click="handleLogout">退出</button>
         </div>
@@ -58,7 +58,9 @@ const route = useRoute();
 const router = useRouter();
 const auth = useAuth();
 const menuOpen = ref(false);
-const navItems = computed(() => MODULES[useStore.role]);
+const navItems = computed(() => MODULES[useStore.role] || []);
+/** 顶栏显示中文角色名，而不是 admin/member 这样的原始值 */
+const roleLabel = computed(() => auth.currentRoleLabel.value);
 const MODULES = {
   admin: [
     { path: "/dashboard", label: "数据大盘" },
@@ -117,8 +119,14 @@ const topbarTitle = computed(() => {
   return route.meta.title;
 });
 
+/**
+ * 退出登录。
+ * 后端没有 logout 接口，属纯前端清理：清空 store 与 localStorage 里的 token，
+ * 再回到登录页并给出一条提示，避免残留上一次的身份信息。
+ */
 function handleLogout() {
-  useStore.setToken('');
+  auth.logout();
+  sessionStorage.setItem("gym_login_notice", "已安全退出登录");
   router.replace("/login");
 }
 </script>

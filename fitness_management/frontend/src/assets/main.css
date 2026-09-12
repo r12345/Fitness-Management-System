@@ -651,6 +651,90 @@ button {
   font-size: 12px;
 }
 
+/* 登录 / 注册模式切换 */
+.auth-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 16px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
+.auth-tab {
+  flex: 1;
+  min-height: 34px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.auth-tab:hover {
+  color: var(--primary-dark);
+}
+
+.auth-tab.active {
+  background: var(--surface);
+  color: var(--primary-dark);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
+}
+
+.login-notice {
+  margin-bottom: 14px;
+  padding: 9px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.login-success {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+/* 表单字段级校验提示 */
+.field.has-error input {
+  border-color: var(--danger);
+}
+
+.field.has-error input:focus {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12);
+}
+
+.field-error {
+  color: var(--danger);
+  font-size: 12px;
+}
+
+/* 表单底部的「立即注册 / 返回登录」 */
+.auth-switch {
+  margin-top: 14px;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+.link-btn {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.link-btn:hover {
+  color: var(--primary-dark);
+}
+
 .modal-mask {
   position: fixed;
   inset: 0;

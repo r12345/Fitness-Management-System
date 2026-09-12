@@ -237,9 +237,9 @@ import {
   update_training_plan,
   get_records,
   addSchedule,
+  list_schedule,
   get_member
 } from "../api/coach-panel.js";
-import {create_schedule, list_schedule} from "../api/schedule.js";
 import {getCoachStatistics} from "../api/statistics.js";
 
 const toast = useToast();
@@ -359,7 +359,7 @@ async function saveSchedule() {
     return;
   }
   try {
-    const res = await create_schedule({
+    const res = await addSchedule({
       course_id: scheduleForm.course_id,
       schedule_date: scheduleForm.schedule_date,
       start_time: scheduleForm.start_time + ":00",

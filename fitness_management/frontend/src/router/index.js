@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from "vue-router";
-import { useAuth } from "../composables/useAuth";
+import { homeOfRole } from "../composables/useAuth";
+import { useUserStore } from "../stores/user";
 import AppLayout from "../components/AppLayout.vue";
 import LoginView from "../views/LoginView.vue";
 import DashboardView from "../views/DashboardView.vue";
@@ -19,6 +20,13 @@ const routes = [
     name: "login",
     component: LoginView,
     meta: { public: true, title: "登录" }
+  },
+  {
+    // 与 /login 共用同一个组件，组件内按地址切换登录/注册模式
+    path: "/register",
+    name: "register",
+    component: LoginView,
+    meta: { public: true, title: "注册" }
   },
   {
     path: "/",
@@ -97,16 +105,44 @@ const router = createRouter({
   history: createWebHistory(),
   routes
 });
-// 白名单
-const whiteList = ['/login','/register']
-// 全局守卫路由
-router.beforeEach((to, from) => {
-  if (!whiteList.includes(to.path)) {
-    if (!localStorage.getItem('token')) {
-      return '/login'
-    }
-  }
-})
 
+// 未登录也可访问的页面
+const whiteList = ["/login", "/register"];
+
+/** 读取当前登录角色。守卫执行时 Pinia 已就绪；异常时降级为不校验角色，避免整站导航被卡住 */
+function currentRole() {
+  try {
+    return useUserStore().role || "";
+  } catch (error) {
+    return "";
+  }
+}
+
+// 全局守卫
+router.beforeEach((to) => {
+  const token = localStorage.getItem("token");
+  const isPublic = whiteList.includes(to.path);
+  const role = currentRole();
+
+  // 未登录：只放行登录/注册，其余跳登录页并记住原本要去的位置
+  if (!token) {
+    return isPublic ? true : { path: "/login", query: { redirect: to.fullPath } };
+  }
+
+  // 已登录还去登录/注册页：直接回到本角色的工作台
+  if (isPublic) {
+    const home = role ? homeOfRole(role) : "";
+    // 角色缺失时 homeOfRole 会回落到 /login，此时不再重定向，避免自我循环
+    return home && home !== to.path ? home : true;
+  }
+
+  // 角色越权：路由声明了 meta.roles 但不含当前角色时，退回本角色首页
+  const allow = to.meta ? to.meta.roles : null;
+  if (allow && role && !allow.includes(role)) {
+    return homeOfRole(role);
+  }
+
+  return true;
+});
 
 export default router;

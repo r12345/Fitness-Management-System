@@ -1,6 +1,6 @@
 """教练工作台接口（接口文档 §19 教练工作台 / §14 训练计划）。
 
-所有接口的教练身份均由当前登录用户推导（``role=coach``），请求体不接收教练编号。
+路径前缀：``/api/v1/coach-panel``
 
     19.1 GET    /schedules          我的排课
     19.2 POST   /schedules          新增排课
@@ -9,20 +9,17 @@
     19.5 GET    /plans              训练计划列表
     19.6 POST   /plans              新增训练计划
     14.3 PUT    /plans/{plan_id}    编辑训练计划
-
-本模块只声明一次路由；``api/v1/router.py`` 会把同一个 router 分别挂到
-``/api/v1/coach-panel``（文档写法）与 ``/api/v1/coach_panel``（前端在用的历史写法）下，
-因此这里写的都是相对路径，也不需要在装饰器上写 ``operation_id``。
 """
 from collections.abc import Iterable
 from datetime import date as date_type
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import Depends, Query
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from .router import coach_panel_router
 from ...core.database import get_db
 from ...core.security import get_current_coach
 from ...crud.coach_panel import (
@@ -45,9 +42,6 @@ from ...schemas.coach_panel import (
 from ...schemas.training import PlanCreate, PlanUpdate
 from ...utils.codes import HTTP_BAD_REQUEST, HTTP_NOT_FOUND, MEMBER_NOT_FOUND
 from ...utils.res import BizError, success_response
-
-#: 相对路径路由，由 router.py 挂到中划线与下划线两个前缀下
-router = APIRouter()
 
 
 # ===== 公共工具 =====
@@ -87,7 +81,7 @@ def _plan_payload(plan: TrainPlan, member: Optional[MemberBrief]) -> dict:
 
 # ===== 19.1 我的排课 =====
 
-@router.get("/schedules", summary="我的排课")
+@coach_panel_router.get("/schedules", summary="我的排课")
 async def get_coach_schedules(
     status: Optional[str] = Query(None, description="排课状态"),
     schedule_date: Optional[date_type] = Query(None, description="上课日期"),
@@ -101,7 +95,7 @@ async def get_coach_schedules(
 
 # ===== 19.2 新增排课 =====
 
-@router.post("/schedules", summary="新增排课")
+@coach_panel_router.post("/schedules", summary="新增排课")
 async def create_coach_schedule(
     schedule: ScheduleCreate,
     coach: Coach = Depends(get_current_coach),
@@ -118,7 +112,7 @@ async def create_coach_schedule(
 
 # ===== 19.3 我的学员 =====
 
-@router.get("/students", summary="我的学员")
+@coach_panel_router.get("/students", summary="我的学员")
 async def get_coach_students(
     coach: Coach = Depends(get_current_coach),
     db: AsyncSession = Depends(get_db),
@@ -130,7 +124,7 @@ async def get_coach_students(
 
 # ===== 19.4 授课记录 =====
 
-@router.get("/records", summary="授课记录")
+@coach_panel_router.get("/records", summary="授课记录")
 async def get_coach_records(
     coach: Coach = Depends(get_current_coach),
     db: AsyncSession = Depends(get_db),
@@ -142,7 +136,7 @@ async def get_coach_records(
 
 # ===== 19.5 训练计划列表 =====
 
-@router.get("/plans", summary="训练计划列表")
+@coach_panel_router.get("/plans", summary="训练计划列表")
 async def list_coach_plans(
     coach: Coach = Depends(get_current_coach),
     db: AsyncSession = Depends(get_db),
@@ -158,7 +152,7 @@ async def list_coach_plans(
 
 # ===== 19.6 新增训练计划 =====
 
-@router.post("/plans", summary="新增训练计划")
+@coach_panel_router.post("/plans", summary="新增训练计划")
 async def create_coach_plan(
     plan: PlanCreate,
     coach: Coach = Depends(get_current_coach),
@@ -181,7 +175,7 @@ async def create_coach_plan(
 
 # ===== 14.3 编辑训练计划 =====
 
-@router.put("/plans/{plan_id}", summary="编辑训练计划")
+@coach_panel_router.put("/plans/{plan_id}", summary="编辑训练计划")
 async def update_coach_plan(
     plan_id: int,
     plan: PlanUpdate,

@@ -1,5 +1,5 @@
 // 教练工作台接口（接口文档 §19 教练工作台 / §14 训练计划）
-// 对应后端 /api/v1/coach_panel/*（后端同时兼容中划线 /api/v1/coach-panel/*）
+// 对应后端 /api/v1/coach-panel/*
 import request from "./request";
 
 /**
@@ -24,7 +24,7 @@ function planPayload(data) {
 // 19.5 训练计划列表
 export function list_my_plans() {
   return request({
-    url: "/coach_panel/plans",
+    url: "/coach-panel/plans",
     method: "get"
   });
 }
@@ -32,7 +32,7 @@ export function list_my_plans() {
 // 19.6 新增训练计划
 export function create_training_plan(data) {
   return request({
-    url: "/coach_panel/plans",
+    url: "/coach-panel/plans",
     method: "post",
     data: planPayload(data)
   });
@@ -41,7 +41,7 @@ export function create_training_plan(data) {
 // 14.3 编辑训练计划
 export function update_training_plan(plan_id, data) {
   return request({
-    url: `/coach_panel/plans/${plan_id}`,
+    url: `/coach-panel/plans/${plan_id}`,
     method: "put",
     data: planPayload(data)
   });
@@ -50,22 +50,31 @@ export function update_training_plan(plan_id, data) {
 
 export function get_records() {
   return request({
-    url: "/coach_panel/records",
+    url: "/coach-panel/records",
     method: "get"
   });
 }
 export function get_member() {
   return request({
-    url: "/coach_panel/students",
+    url: "/coach-panel/students",
     method: "get"
   });
 }
 
 
+// 19.1 我的排课
+export function list_schedule(params) {
+  return request({
+    url: "/coach-panel/schedules",
+    method: "get",
+    params
+  });
+}
+
 // 19.2 新增排课
 export function addSchedule(data) {
   return request({
-    url: "/coach_panel/schedules",
+    url: "/coach-panel/schedules",
     method: "post",
     data
   });
