@@ -14,7 +14,6 @@ import SystemView from "../views/SystemView.vue";
 import MemberCenterView from "../views/MemberCenterView.vue";
 import CoachPanelView from "../views/CoachPanelView.vue";
 import AppointmentList from "../views/AppointmentList.vue";
-// AgentView 已不再挂路由：AI 助手的入口是全局悬浮球，页面版属重复入口
 
 const routes = [
   {
@@ -107,10 +106,8 @@ const routes = [
         // 所以会员可以进这一页（页面里本来就有「我的预约」分支，之前路由却被挡住了）
         meta: { roles: ["admin", "coach", "reception", "member"], title: "预约管理" }
       }
-      // 这里原本还有一个 /agent「AI 助手」页面。
-      // 它不承载任何业务，真正的入口是全局悬浮球（AgentFab，挂在 AppLayout 上，
-      // 登录后每个页面右下角都有）。页面版只是重复的入口，已下线；
-      // AgentView.vue 文件保留未使用，确认不需要后可删。
+      // 原本这里还有 /agent「AI 助手」页面：不承载业务，且和全局悬浮球（AgentFab）
+      // 是重复入口，已连页面文件一起删除。AI 助手现在只有一个入口 —— 悬浮球。
 
     ]
   },
