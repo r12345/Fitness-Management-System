@@ -3,19 +3,30 @@ from sqlalchemy import select, func, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from fitness_management.models import Coach, TrainPlan, Member, Equipment, Course, Appointment, Schedule, User
+from fitness_management.crud.member import sync_card_statuses
 from fitness_management.schemas.statistics import StatisticsResponse, MemberCardDistributionResponse, \
     MemberStatisticsResponse, EquipmentStatisticsResponse, EquipmentStatus
 
 
 async def get_coaches_statistics(db: AsyncSession, period: str = None,coach_id: int = None):
     """获取教练统计数据。period可选：today / week / month / year / None(全部)"""
+    # 营收口径与教练工作台（crud/coach.py 的 get_coach_statistics_obj）统一为
+    # 「该教练名下课程价格合计」。原来这一列取的是 Coach.salary——教练**工资**，
+    # 和另一个接口的同名字段口径完全不同，前端拿同一个指标名却看到两套数字。
+    course_revenue = (
+        select(func.coalesce(func.sum(Course.price), 0.0))
+        .where(Course.coach_id == Coach.id)
+        .correlate(Coach)
+        .scalar_subquery()
+    )
+
     base_select = select(
         Coach.id.label('coach_id'),
         Coach.name.label('coach_name'),
         Coach.hours.label('hours'),
         # distinct 去重：同一个会员多条计划只统计一次
         func.count(func.distinct(TrainPlan.member_id)).label("student_count"),
-        Coach.salary.label('revenue'),
+        course_revenue.label('revenue'),
         func.count(func.distinct(Schedule.id)).label('course_count'),
         func.avg(Coach.score).label('average_score')
     ).outerjoin(Schedule, Schedule.coach_id == Coach.id).where(Coach.id ==coach_id)
@@ -48,8 +59,8 @@ async def get_coaches_statistics(db: AsyncSession, period: str = None,coach_id: 
         # period为空，不做时间过滤
         query = base_select.join(TrainPlan, isouter=True)
 
-    # group by 非聚合字段
-    query = query.group_by(Coach.id, Coach.name, Coach.hours, Coach.salary)
+    # group by 非聚合字段（revenue 是关联子查询，不需要进 group by）
+    query = query.group_by(Coach.id, Coach.name, Coach.hours)
 
     result = await db.execute(query)
     coaches = result.all()
@@ -60,6 +71,9 @@ async def get_coaches_statistics(db: AsyncSession, period: str = None,coach_id: 
 
 
 async def get_members_statistics(db: AsyncSession, period: str = None):
+    # 先归正卡状态，「在册正常会员」才是真实数字
+    await sync_card_statuses(db)
+
     query= select(func.count(Member.status)).where(Member.status == '正常')
     result = await db.execute(query)
     activate_members = result.scalar_one_or_none()

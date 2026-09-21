@@ -48,12 +48,26 @@ class SystemConfig(Base):
 
 
 class SystemLog(Base):
-    """系统日志表，对应 MySQL 的 sys_log。"""
+    """系统日志表，对应 MySQL 的 sys_log。
+
+    ``role`` 是后加的列，刻意留成可空：历史行没有身份可填，
+    强行 NOT NULL 就得给它们编一个，反而污染数据。
+    有了它才能把「超级管理员 / 前台运营 / 健身教练 / 普通会员」
+    四种身份的操作分开看、分开筛。
+
+    ``user`` 存的是**登录账号**（不是姓名）。姓名靠账号去 sys_user 关联出来，
+    这样账号改名换姓也不怕日志跟着失真。
+    """
 
     __tablename__ = "sys_log"
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True, comment="日志编号")
     log_type: Mapped[str] = mapped_column(String(32), nullable=False, comment="日志类型")
-    user: Mapped[str] = mapped_column(String(64), nullable=False, comment="操作人")
+    role: Mapped[Optional[str]] = mapped_column(
+        String(32),
+        nullable=True,
+        comment="操作人身份：admin超级管理员,reception前台运营,coach健身教练,member普通会员"
+    )
+    user: Mapped[str] = mapped_column(String(64), nullable=False, comment="操作人登录账号")
     content: Mapped[str] = mapped_column(Text, nullable=False, comment="操作内容")
     created_at: Mapped[datetime] = mapped_column(
         DateTime,

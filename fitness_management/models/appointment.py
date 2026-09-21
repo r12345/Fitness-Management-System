@@ -25,6 +25,14 @@ class Appointment(Base):
         nullable=True, default=False, comment="是否签到"
     )
     remark: Mapped[Optional[str]] = mapped_column(Text, nullable=True, comment="处理备注")
+    # 关联教练排课：预约对应的那一次课。排课由课程时间派生、教练可改时间地点，
+    # 绑定后会员的预约视图直接跟随教练排课的最新信息（时间/地点/状态）。
+    schedule_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("coach_schedule.id", ondelete="SET NULL"),
+        nullable=True,
+        comment="关联教练排课",
+    )
 
     member: Mapped["Member"] = relationship(back_populates="appointments")
     course: Mapped["Course"] = relationship(back_populates="appointments")
+    schedule: Mapped[Optional["Schedule"]] = relationship(back_populates="appointments")

@@ -29,9 +29,19 @@ class Coach(Base):
 
     user: Mapped[Optional["User"]] = relationship(back_populates="coach_info")
     # 反向：排班、课程、训练计划
-    schedules: Mapped[list["Schedule"]] = relationship(back_populates="coach")
-    courses: Mapped[list["Course"]] = relationship(back_populates="coach")
-    train_plans: Mapped[list["TrainPlan"]] = relationship(back_populates="coach")
+    # passive_deletes=True：三张子表的外键都是 ON DELETE CASCADE，交给数据库级联；
+    # 见 models/course.py 里的说明（否则 ORM 会去把子行外键置 NULL，而它是 NOT NULL）。
+    schedules: Mapped[list["Schedule"]] = relationship(
+        back_populates="coach", passive_deletes=True
+    )
+    courses: Mapped[list["Course"]] = relationship(
+        back_populates="coach", passive_deletes=True
+    )
+    train_plans: Mapped[list["TrainPlan"]] = relationship(
+        back_populates="coach", passive_deletes=True
+    )
+    # 反向：归属这位教练的学员。外键是 ON DELETE SET NULL（可空），不需要 passive_deletes
+    students: Mapped[list["Member"]] = relationship(back_populates="coach")
 
 
 class Schedule(Base):
@@ -56,3 +66,4 @@ class Schedule(Base):
 
     coach: Mapped["Coach"] = relationship(back_populates="schedules")
     course: Mapped["Course"] = relationship(back_populates="schedules")
+    appointments: Mapped[list["Appointment"]] = relationship(back_populates="schedule")

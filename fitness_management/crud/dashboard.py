@@ -6,9 +6,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from fitness_management.models import Member, ConsumeRecord, Appointment
+from fitness_management.crud.member import sync_card_statuses
 
 
 async def get_dashboard_sum(period:str,db: AsyncSession):
+    # 大盘的「过期会员」按 status 统计，先把状态按到期时间归正，否则这个数字
+    # 会一直停留在历史值（库里曾出现到期日 2099 年却标着「过期」的数据）。
+    await sync_card_statuses(db)
+
     now = datetime.now()
 
     # 1. 计算周期起点（修正：起点→现在，不是现在→未来）
@@ -29,8 +34,10 @@ async def get_dashboard_sum(period:str,db: AsyncSession):
     else:
         period_start = datetime(year=now.year, month=now.month, day=now.day)
         period_end = now
-    stmt1 = select(func.count(Member.id)).where(Member.card_start.between(period_start, period_end))
-    stmt2 = select(func.count(Member.id)).where(Member.status == "正常")
+    # 「会员总数」= 全部会员；「本期新增会员」= 本期开卡的人。
+    # 之前两句话写反了，前端卡片把「本期开卡数」当成了会员总数。
+    stmt1 = select(func.count(Member.id))
+    stmt2 = select(func.count(Member.id)).where(Member.card_start.between(period_start, period_end))
     stmt3 = select(func.count(Member.id)).where(Member.status == "过期")
     stmt4 = select(func.sum(ConsumeRecord.amount)).where(ConsumeRecord.created_at.between(period_start, period_end))
     stmt5 = select(func.count(Appointment.id)).where(Appointment.appointment_time.between(period_start, period_end))
@@ -170,6 +177,8 @@ async def get_trend(period: str, db: AsyncSession):
 
 
 async def get_distribution(db:AsyncSession):
+    # 「在册正常会员」按 status 过滤，同样先归正状态
+    await sync_card_statuses(db)
     query = select(Member.card_type,func.count(Member.id)).group_by(Member.card_type).where(Member.status=='正常')
     result = await db.execute(query)
     data = result.all()

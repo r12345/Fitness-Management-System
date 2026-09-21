@@ -18,6 +18,11 @@ class Member(Base):
         nullable=True,
         comment="关联系统登录用户id，线下办卡可为null"
     )
+    coach_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("coach.id", ondelete="SET NULL"),
+        nullable=True,
+        comment="归属教练：教练自己拉来的学员，前台/管理员办卡可为null"
+    )
     name: Mapped[str] = mapped_column(String(64), nullable=False, comment="姓名")
     phone: Mapped[str] = mapped_column(String(20), nullable=False, comment="手机号")
     gender: Mapped[Optional[str]] = mapped_column(String(16), nullable=True, comment="性别")
@@ -32,9 +37,23 @@ class Member(Base):
     remark: Mapped[Optional[str]] = mapped_column(Text, nullable=True, comment="备注")
 
     user: Mapped[Optional["User"]] = relationship(back_populates="member")
+    # 归属教练：外键是 ON DELETE SET NULL（可空），与 ORM 默认行为一致，不需要 passive_deletes
+    coach: Mapped[Optional["Coach"]] = relationship(back_populates="students")
     # 反向：消费记录、预约、训练计划、打卡
-    consume_records: Mapped[list["ConsumeRecord"]] = relationship(back_populates="member")
-    appointments: Mapped[list["Appointment"]] = relationship(back_populates="member")
-    train_plans: Mapped[list["TrainPlan"]] = relationship(back_populates="member")
-    checkin_records: Mapped[list["CheckinRecord"]] = relationship(back_populates="member")
-    exercise_records: Mapped[list["ExerciseRecord"]] = relationship(back_populates="member")
+    # passive_deletes=True：这几张子表的外键都是 ON DELETE CASCADE，交给数据库级联即可；
+    # 否则 ORM 会先把子行的 member_id 置 NULL，而它是 NOT NULL，删会员就会直接报错。
+    consume_records: Mapped[list["ConsumeRecord"]] = relationship(
+        back_populates="member", passive_deletes=True
+    )
+    appointments: Mapped[list["Appointment"]] = relationship(
+        back_populates="member", passive_deletes=True
+    )
+    train_plans: Mapped[list["TrainPlan"]] = relationship(
+        back_populates="member", passive_deletes=True
+    )
+    checkin_records: Mapped[list["CheckinRecord"]] = relationship(
+        back_populates="member", passive_deletes=True
+    )
+    exercise_records: Mapped[list["ExerciseRecord"]] = relationship(
+        back_populates="member", passive_deletes=True
+    )

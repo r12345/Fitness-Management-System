@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 # 数据库连接串，优先读取环境变量，便于本地/测试环境切换
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "mysql+aiomysql://root:root@localhost/fitness_management?charset=utf8mb4",
+    "mysql+aiomysql://root:123456@localhost/fitness_management?charset=utf8mb4",
 )
 
 async_engine = create_async_engine(

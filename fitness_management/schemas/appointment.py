@@ -1,5 +1,6 @@
 """预约、取消与签到模型。"""
-from datetime import datetime
+from datetime import date as date_type
+from datetime import datetime, time as time_type
 from typing import Optional
 
 from pydantic import BaseModel, Field
@@ -25,7 +26,14 @@ class AppointmentResolve(BaseModel):
 # ===== 响应模型 =====
 
 class AppointmentListItem(BaseModel):
-    """预约列表项。"""
+    """预约列表项。
+
+    除预约本身字段外，附带「同步自教练排课」的信息：schedule_date / schedule_start /
+    schedule_end / schedule_location / schedule_status。这些来自会员预约所关联的那一次排课
+    （appointment.schedule_id），会员看到的课程时间、地点、状态与教练工作台完全一致。
+
+    关联不到排课时（排课窗口外的历史预约）这些字段为空，前端退回展示 appointment_time / course。
+    """
 
     id: int
     member_id: int
@@ -34,6 +42,13 @@ class AppointmentListItem(BaseModel):
     course_id: int
     course: Optional[str] = None
     coach: Optional[str] = None
+    schedule_id: Optional[int] = None
+    # 同步自教练排课的信息
+    schedule_date: Optional[date_type] = None
+    schedule_start: Optional[time_type] = None
+    schedule_end: Optional[time_type] = None
+    schedule_location: Optional[str] = None
+    schedule_status: Optional[str] = None
     appointment_time: datetime
     status: str
     checked_in: Optional[bool] = None

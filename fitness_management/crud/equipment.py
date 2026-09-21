@@ -43,9 +43,11 @@ async def list_equipment(keyword, category, status, page, page_size, db:AsyncSes
 
 
 async def get_equipment(equipment_id, db: AsyncSession):
+    # 原来这个函数查完就结束了 —— 没有 return，调用方拿到的永远是 None。
+    # 当前全项目没人调用它，先补上返回值，避免以后接上来就踩坑。
     stmt = select(Equipment).where(Equipment.id == equipment_id)
     result = await db.execute(stmt)
-    equipment = result.scalar()
+    return result.scalar_one_or_none()
 
 async def add_equipment(equipment_info: EquipmentCreateRequest, db: AsyncSession):
     equipment = Equipment(**equipment_info.model_dump())

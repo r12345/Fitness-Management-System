@@ -49,3 +49,6 @@ from fitness_management.api.v1 import dashboard
 
 reception_router = APIRouter(prefix='/api/v1/reception', tags=['前台管理'])
 from fitness_management.api.v1 import reception
+
+agent_router = APIRouter(prefix='/api/v1/agent', tags=['AI 助手'])
+from fitness_management.api.v1 import agent

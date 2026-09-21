@@ -2,6 +2,7 @@
 from datetime import date, datetime, time, timedelta
 from typing import Optional
 
+from fastapi import HTTPException
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
@@ -13,8 +14,36 @@ from fitness_management.schemas.training import (
 
 
 # ===== 打卡 =====
+# 「当前在店」只看今天和昨天：跨零点（23:50 到店、次日离开）能对上，
+# 更早的未离店记录视为作废，既不算在店、也不挡下一次到店打卡。
+OPEN_CHECKIN_DAYS = 2
+
+
+async def get_open_checkin(db: AsyncSession, member_id: int) -> Optional[CheckinRecord]:
+    """当前未离店的打卡记录（取今天/昨天里最新的一条），没有则 None。"""
+    earliest = date.today() - timedelta(days=OPEN_CHECKIN_DAYS - 1)
+    return await db.scalar(
+        select(CheckinRecord)
+        .where(
+            CheckinRecord.member_id == member_id,
+            CheckinRecord.leave_time.is_(None),
+            CheckinRecord.checkin_date >= earliest,
+        )
+        .order_by(
+            CheckinRecord.checkin_date.desc(),
+            CheckinRecord.checkin_time.desc(),
+            CheckinRecord.id.desc(),
+        )
+        .limit(1)
+    )
+
+
 async def create_checkin(db: AsyncSession, member_id: int, data: CheckinCreate) -> CheckinRecord:
     """到店打卡：拆分 datetime 为 date + time。"""
+    # 已有一条未离店的记录时不允许再打一次：原来每次都插入新行，
+    # 于是每次刷新页面再点一下「到店打卡」都会多出一张永远不闭合的单子。
+    if await get_open_checkin(db, member_id):
+        raise HTTPException(status_code=400, detail="您已到店打卡，请先离店打卡")
     record = CheckinRecord(
         member_id=member_id,
         checkin_date=data.checkin_time.date(),
@@ -32,6 +61,8 @@ async def leave_checkin(db: AsyncSession, checkin_id: int, member_id: int, data:
     )
     if not record:
         return None
+    if record.leave_time is not None:
+        raise HTTPException(status_code=400, detail="该打卡记录已离店，请勿重复操作")
     record.leave_time = data.leave_time.time()
     # 计算时长：用当日 checkin_time 和 leave_time 差值
     start = datetime.combine(record.checkin_date, record.checkin_time)

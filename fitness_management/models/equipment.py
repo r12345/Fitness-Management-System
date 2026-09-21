@@ -22,8 +22,14 @@ class Equipment(Base):
     status: Mapped[str] = mapped_column(String(16), nullable=False, comment="状态")
     remark: Mapped[Optional[str]] = mapped_column(Text, nullable=True, comment="备注")
 
-    repair_list: Mapped[list["Repair"]] = relationship(back_populates="equipment")
-    maintain_list: Mapped[list["MaintenanceRecord"]] = relationship(back_populates="equipment")
+    # passive_deletes=True：两张子表的外键都是 ON DELETE CASCADE，交给数据库级联；
+    # 见 models/course.py 里的说明（否则 ORM 会去把子行外键置 NULL，而它是 NOT NULL）。
+    repair_list: Mapped[list["Repair"]] = relationship(
+        back_populates="equipment", passive_deletes=True
+    )
+    maintain_list: Mapped[list["MaintenanceRecord"]] = relationship(
+        back_populates="equipment", passive_deletes=True
+    )
 
 
 class Repair(Base):

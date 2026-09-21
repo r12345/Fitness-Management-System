@@ -31,6 +31,14 @@ class CheckinItem(BaseModel):
         from_attributes = True
 
 
+class CurrentCheckin(BaseModel):
+    """当前在店状态响应（前端刷新后据此恢复「到店/离店」按钮）。"""
+    checked_in: bool
+    checkin_id: Optional[int] = None
+    checkin_date: Optional[date] = None
+    checkin_time: Optional[time] = None
+
+
 # ===== 运动记录 =====
 class ExerciseRecordCreate(BaseModel):
     """新增运动记录请求。"""
