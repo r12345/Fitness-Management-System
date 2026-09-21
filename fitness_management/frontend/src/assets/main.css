@@ -198,7 +198,32 @@ button {
   font-weight: 700;
 }
 
-.mobile-menu-btn {
+/* 顶栏左侧：菜单按钮与标题要并排，原来没有这条规则，
+   按钮（inline-flex）和标题（block）会上下叠在一行 64px 的顶栏里 */
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+/* 左上角菜单按钮。宽屏折叠侧栏、窄屏拉开抽屉，两种形态下都必须有可见反馈。
+   注意：这里不能再写 display:none 给宽屏用 —— .btn 的 display 规则在文件后面，
+   同权重下后者胜出，按钮会一直显示却什么都不做（就是之前的「死按钮」）。 */
+.menu-btn {
+  flex: 0 0 auto;
+}
+
+.app-layout.collapsed .sidebar {
+  transform: translateX(-100%);
+}
+
+.app-layout.collapsed .main {
+  margin-left: 0;
+}
+
+/* 窄屏展开侧栏时的遮罩，点空白处收起。层级要低于侧栏(30) */
+.sidebar-backdrop {
   display: none;
 }
 
@@ -360,6 +385,66 @@ button {
   box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
 }
 
+/* 输入框下方的辅助说明（例如「已按课程排课时间自动填入」） */
+/* 兼容两种位置：写在 .field 内部，或直接放在弹窗 body 里说明整组字段 */
+.field .field-hint,
+.field-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+/* 「预设可选 + 可自由输入」的输入框（input + datalist）：
+   右侧留出空间，避免文字压到浏览器自带的展开箭头 */
+.form-grid input[list] {
+  padding-right: 24px;
+}
+
+/* 表格上方的一行说明（例如「排课按课程时间自动生成，当前只显示 …」）：
+   贴在 panel-body 顶部，用浅底和细分隔线与表格分开 */
+.panel-body .panel-note {
+  margin: 0;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-soft);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* 会员卡剩余天数的状态着色：过期红、7 天内橙、其余灰 */
+.remain-ok {
+  color: var(--muted);
+}
+
+.remain-soon {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.remain-expired {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+/* 营业时间：两个时间选择器并排，中间一个「至」 */
+.time-range {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.time-range input[type="time"] {
+  flex: 1 1 0;
+  min-width: 120px;
+}
+
+.time-range-sep {
+  color: var(--muted);
+  font-size: 13px;
+}
+
 .form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -471,6 +556,47 @@ button {
   min-height: 30px;
   padding: 0 10px;
   font-size: 13px;
+}
+
+/* 危险操作按钮。
+   原来代码里到处用 `.btn-danger`，但全局样式里从没定义过它 —— 于是那些「删除」
+   按钮只剩 .btn 的透明底 + 透明边框，看着就是一行普通文字。这里补齐色板。 */
+.btn-danger {
+  background: var(--danger);
+  color: #ffffff;
+}
+
+.btn-danger:hover {
+  background: #b91c1c;
+  transform: translateY(-1px);
+}
+
+.btn-danger:focus-visible,
+.btn-primary:focus-visible,
+.btn-secondary:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.btn:disabled,
+.btn[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* 表格行内的「删除」用柔和描边，避免整张表被实心红按钮占满；
+   整块的破坏性操作（确认弹窗里的按钮）不带 .btn-sm，仍是实心红，层级更清楚。
+   必须写在 .btn-danger / .btn-sm 之后才能覆盖。 */
+.btn-danger.btn-sm {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: var(--danger);
+}
+
+.btn-danger.btn-sm:hover {
+  background: #fee2e2;
+  border-color: var(--danger);
 }
 
 .tabs {
@@ -854,8 +980,12 @@ button {
     margin-left: 0;
   }
 
-  .mobile-menu-btn {
-    display: inline-flex;
+  .sidebar-backdrop.open {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    z-index: 20;
   }
 
   .login-page {

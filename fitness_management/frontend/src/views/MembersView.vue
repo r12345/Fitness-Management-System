@@ -1,7 +1,9 @@
 <template>
   <div>
     <transition name="fade">
-      <div v-if="toast.message.value" class="toast-banner">{{ toast.message.value }}</div>
+      <!-- useToast 返回的是 reactive({message: ref()})，模板里读 toast.message 才会解包。
+           写成 toast.message.value 拿到的是 undefined，提示条永远不会显示。 -->
+      <div v-if="toast.message" class="toast-banner" :class="toast.type">{{ toast.message }}</div>
     </transition>
     <div class="page-header">
       <div>
@@ -60,6 +62,7 @@
                 <th>年龄</th>
                 <th>办卡类型</th>
                 <th>到期时间</th>
+                <th>剩余</th>
                 <th>余额</th>
                 <th>卡状态</th>
                 <th>操作</th>
@@ -74,15 +77,20 @@
                 <td>{{ item.age ?? 0 }}</td>
                 <td>{{ item.card_type }}</td>
                 <td>{{ item.card_expire }}</td>
+                <!-- 卡状态由后端按到期时间推导，这里把「还有几天」直接摆出来，
+                     两者对不上时一眼就能看出来 -->
+                <td>
+                  <span :class="remainClass(item)">{{ cardRemain(item) }}</span>
+                </td>
                 <td>¥ {{ (item.balance ?? 0).toLocaleString("zh-CN") }}</td>
                 <td>{{ item.status }}</td>
                 <td>
                   <div class="page-actions">
                     <button class="btn btn-secondary btn-sm" type="button" @click="getDetail(item)">详情</button>
                     <button class="btn btn-secondary btn-sm" type="button" @click="openRenew(item)">续费</button>
+                    <button class="btn btn-secondary btn-sm" type="button" @click="changeEdit(item)">编辑</button>
+                    <button class="btn btn-secondary btn-sm" type="button" @click="changeState(item)">编辑状态</button>
                     <button class="btn btn-danger btn-sm" type="button" @click="removeMember(item)">删除</button>
-                    <button class="btn btn-danger btn-sm" type="button" @click="changeEdit(item)">编辑</button>
-                    <button class="btn btn-danger btn-sm" type="button" @click="changeState(item)">编辑状态</button>
                   </div>
                 </td>
               </tr>
@@ -132,15 +140,27 @@
         <div class="field"><label>开卡时间</label><input v-model="form.card_start" type="date"></div>
         <div class="field"><label>到期时间</label><input v-model="form.card_expire" type="date"></div>
         <div class="field"><label>余额</label><input v-model.number="form.balance" type="number"></div>
-        <div class="field"><label>状态</label>
-          <select v-model="form.status">
-            <option>正常</option>
-            <option>过期</option>
-            <option>暂停</option>
-          </select>
+        <!-- 卡状态不再是表单字段：它由「到期时间」推导，手填只会造出
+             「卡已过期一年却标着正常」这种自相矛盾的数据。
+             需要人工停卡，用列表里的「编辑状态」。 -->
+        <div class="field"><label>卡状态</label>
+          <p class="field-hint">{{ autoStatusHint }}</p>
         </div>
         <div class="field"><label>备注</label><input v-model="form.remark" type="text"></div>
+        <div class="field">
+          <label>归属教练</label>
+          <!-- 归属教练必须显式提交：后端只在请求体里带了这一项时才覆盖，
+               不然「编辑一下手机号」会把学员从他的教练名下清掉。 -->
+          <select v-model.number="form.coach_id">
+            <option :value="null">不指定（未分配）</option>
+            <option v-for="c in coachOptions" :key="c.id" :value="c.id">{{ c.name }}</option>
+          </select>
+        </div>
       </div>
+      <!-- 办完卡的人得能登进会员中心看自己的打卡与预约，所以新增时会顺带开账号。 -->
+      <p v-if="!isEdit" class="field-hint">
+        保存后会同时为该会员创建登录账号：账号为上面填写的手机号，初始密码 123456，请转告本人。
+      </p>
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" type="button" @click="showModal = false">取消</button>
@@ -354,7 +374,9 @@ import {computed, reactive, ref} from "vue";
 import {useAuth} from "../composables/useAuth";
 import {ElPagination} from 'element-plus'
 import {useToast} from "../composables/useToast";
+import {confirmDialog} from "../composables/useConfirm.js";
 import {addMember, deleteMember, get_detail, getMemberList, renewMember, updateMember,updateMemberStatus} from "../api/member.js";
+import {getCoachList} from "../api/coach.js";
 import {onMounted} from "vue";
 import {useRouter} from "vue-router";
 import {useUserStore} from "../stores/user.js";
@@ -447,21 +469,36 @@ function changeEdit(item){
   form.balance = item.balance
   form.status = item.status
   form.remark = item.remark
+  // 归属教练要回填：留空再保存会把学员从教练名下摘掉
+  form.coach_id = item.coach_id ?? null
+}
+
+/** 今天（本地时区）。用 toISOString() 拿到的是 UTC，北京时间 0-8 点会算成前一天 */
+function todayLocal() {
+  const d = new Date()
+  const month = String(d.getMonth() + 1).padStart(2, "0")
+  const day = String(d.getDate()).padStart(2, "0")
+  return `${d.getFullYear()}-${month}-${day}`
 }
 
 function changeAdd(){
   isEdit.value= false
+  nowMemberId.value = null
   showModal.value = true
   form.name = ''
-  form.gender = ''
+  form.gender = '男'
   form.phone = ''
   form.age = 0
-  form.card_type = 'item.card_type'
-  form.card_start = null
+  // 原来是 form.card_type = 'item.card_type'，把字面量当变量用了，
+  // 新增会员的办卡类型一直被写成 "item.card_type"
+  form.card_type = '月卡'
+  form.card_start = todayLocal()
+  // 必须清空，否则「先编辑 A、再新增 B」时 B 会沿用 A 的到期时间
   form.card_expire = null
   form.balance = 0
   form.status = '正常'
   form.remark = '无'
+  form.coach_id = null
 }
 
 
@@ -475,9 +512,23 @@ const form = reactive({
   card_expire: "",
   balance: 0,
   status: "正常",
-  remark: ''
+  remark: '',
+  // 归属教练：办卡时可直接指派，之后也能在「编辑」里改派（null = 未分配）
+  coach_id: null
 });
-form.card_start = new Date().toISOString().split('T')[0]
+
+// 归属教练下拉的候选。会员管理页只有管理员/前台能进，接口对他们放行。
+const coachOptions = ref([]);
+
+async function loadCoachOptions() {
+  try {
+    const res = await getCoachList({ page: 1, page_size: 100 });
+    coachOptions.value = res.data?.items || [];
+  } catch (err) {
+    // 取不到教练列表不影响其余功能，只是这一项没法改派
+    console.warn("加载教练列表失败：", err?.friendlyMessage || err);
+  }
+}
 const showRenewModal = ref(false)
 const renewMemberInfo = ref(null)
 const renewForm = reactive({
@@ -518,67 +569,105 @@ async function saveRenew(){
 }
 const isReception = computed(() => auth.currentRole.value === "reception");
 
+/**
+ * 卡状态由后端按 card_expire（到期时间）推导，前端把这些天数换算出来摆在列表里，
+ * 「状态」和「到期时间」对不对得上一眼就能看出来。
+ */
+function cardRemain(item) {
+  const days = daysToExpire(item.card_expire);
+  if (days === null) return "—";
+  if (days > 0) return `剩 ${days} 天`;
+  if (days === 0) return "今天到期";
+  return `已过期 ${-days} 天`;
+}
+
+function remainClass(item) {
+  const days = daysToExpire(item.card_expire);
+  if (days === null) return "remain-ok";
+  if (days < 0) return "remain-expired";
+  if (days <= 7) return "remain-soon";
+  return "remain-ok";
+}
+
+/** 把 YYYY-MM-DD 换算成距今天数；解析不出来返回 null */
+function daysToExpire(value) {
+  if (!value) return null;
+  // 后端这一列是 DATE，取前 10 位即可（同时兼容带时间的字符串）
+  const expire = new Date(`${String(value).slice(0, 10)}T00:00:00`);
+  if (Number.isNaN(expire.getTime())) return null;
+  const today = new Date(`${todayLocal()}T00:00:00`);
+  return Math.round((expire - today) / 86400000);
+}
+
+/** 表单里实时预告保存后的卡状态，免得用户以为状态还得自己选 */
+const autoStatusHint = computed(() => {
+  if (form.status === "暂停") return "当前是人工设置的「暂停」，保存后保持不变";
+  const days = daysToExpire(form.card_expire);
+  if (days === null) return "请先选择到期时间，卡状态会随之自动判定";
+  return days < 0
+    ? "到期时间已过 → 保存后自动标记为「过期」"
+    : "到期时间未到 → 保存后自动标记为「正常」";
+});
+
 async function loadList() {
   try {
     const res = await getMemberList({
       page: currentPage.value,
-      size: pageSize.value,
+      // 后端这个参数叫 page_size，之前传的是 size：
+      // axios 会把 undefined 丢掉，后端于是永远用默认的 10 条，改每页条数不生效
+      page_size: pageSize.value,
       keyword: keyword.value,
       status: statusFilter.value,
       card_type: cardTypeFilter.value
     });
-    console.log(res)
     items.value = res.data.items
     total.value = res.data.total
   } catch (err) {
-    toast.show("加载列表失败")
+    toast.show("加载列表失败", "error")
   }
 }
 
 onMounted(async () => {
   await loadList()
+  await loadCoachOptions()
 })
 
 // 点击详情
 async function getDetail(item) {
   try {
     const res = await get_detail(item.id)
-    console.log(res.data)
     detailInfo.value = res.data.items
     detailConsumptions.value = res.data.consumptions
     detailCheckins.value = res.data.checkins
     detailAppointments.value = res.data.appointments
     showDetailModal.value = true
   } catch (err) {
-    toast.show("获取详情失败")
+    toast.show("获取详情失败", "error")
   }
 }
 
 
 
 async function saveMember() {
+  // 先把模式存下来：请求过程中别处改动 isEdit 时，提示文案和 payload 仍然一致
+  const editing = isEdit.value
   try {
-    let res;
-    if (isEdit.value) {
-      console.log(form)
-      res = await updateMember(nowMemberId.value, form);
-      // 如果后端返回code判断，开启下面这行
-      console.log(res)
-    } else {
-      console.log(form)
-      res = await addMember(form);
-      console.log(res)
+    const res = editing
+      ? await updateMember(nowMemberId.value, form)
+      : await addMember(form)
+
+    if (res && typeof res.code !== "undefined" && res.code !== 0) {
+      toast.show(res.msg || (editing ? "修改失败" : "新增失败"), "error")
+      return
     }
 
-    // 根据模式动态提示
-    toast.show(isEdit.value ? "修改成功" : "新增成功");
-
+    // 新增会连带开一个登录账号，后端把「账号 + 初始密码」写在 msg 里，
+    // 直接用后端的提示，前台才能当面把凭据告诉会员。
+    toast.show(editing ? "修改成功" : (res.msg || "新增成功"))
     await loadList() // 优先加载数据，再关闭弹窗
-    showModal.value = false;
-
+    showModal.value = false
   } catch (e) {
-    console.error(e);
-    toast.show(isEdit.value ? "修改失败" : "新增失败");
+    toast.show(editing ? "修改失败" : "新增失败", "error")
   }
 }
 
@@ -586,12 +675,26 @@ async function saveMember() {
 
 
 async function removeMember(item) {
+  // 原来是点一下就删，没有二次确认 —— 会员档案还连着打卡、预约、消费记录，
+  // 删掉之后这些会一起没，必须让操作者先看清删的是谁。
+  const ok = await confirmDialog({
+    title: "删除会员",
+    tone: "danger",
+    message: "该会员的打卡记录、预约记录、消费记录会一并删除，此操作不可恢复。",
+    details: [
+      { label: "会员", value: item.name },
+      { label: "手机号", value: item.phone || "—" },
+      { label: "卡类型", value: item.card_type || "—" }
+    ],
+    confirmText: "删除"
+  });
+  if (!ok) return;
   try {
     await deleteMember(item.id);
     toast.show("会员已删除");
     await loadList()
   } catch (e) {
-    toast.show("删除失败")
+    toast.show(e.friendlyMessage || "删除失败", "error")
   }
 }
 </script>

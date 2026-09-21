@@ -65,7 +65,6 @@
 </template>
 
 <script setup>
-import { receptionData } from "../data/mock";
 import StatCard from "../components/StatCard.vue";
 import {get_recent_business_log, get_summary} from "../api/reception.js";
 import {onMounted} from "vue";
@@ -94,7 +93,6 @@ async function get_log(){
 
 async function get_sum(){
   const res = await get_summary();
-  console.log(res)
   data.value[0].value = res.data.today_new_members
   data.value[1].value = res.data.pending_appointments
   data.value[2].value = res.data.pending_repairs

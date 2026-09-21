@@ -11,10 +11,12 @@
     </div>
 
     <div class="stat-grid">
-      <StatCard label="在职教练" v-model:value="stat_total_coach" unit="人" icon="人" />
-      <StatCard label="今日排课" v-model:value="stat_today_course" unit="节" icon="排" />
-      <StatCard label="本月授课课时" v-model:value="stat_sum_hours" unit="课时" icon="课" tone="warn" />
-      <StatCard label="平均评分" v-model:value="stat_avg_score" unit="分" icon="分" />
+      <!-- 传值一律用 :value：StatCard 没有 emit，写 v-model:value 只会在根元素上挂一个
+           永远不会被触发的事件，看着像双向绑定其实不是 -->
+      <StatCard label="在职教练" :value="stat_total_coach" unit="人" icon="人" />
+      <StatCard label="今日排课" :value="stat_today_course" unit="节" icon="排" />
+      <StatCard label="累计授课课时" :value="stat_sum_hours" unit="课时" icon="课" tone="warn" />
+      <StatCard label="平均评分" :value="stat_avg_score" unit="分" icon="分" />
     </div>
 
    <div class="panel-search" style="display:flex;gap:12px;align-items:center;padding:16px;flex-wrap:wrap;">
@@ -154,6 +156,11 @@
               </select>
             </div>
           </div>
+          <!-- 教练必须能登录才有意义：新增时会顺带开一个账号，
+               凭据就是「手机号 + 123456」，当面告知本人即可。 -->
+          <p v-if="!isEditCoach" class="field-hint">
+            保存后会同时为该教练创建登录账号：账号为上面填写的手机号，初始密码 123456。
+          </p>
         </div>
          <div class="modal-footer">
       <button class="btn btn-secondary" @click="closeCoachModal">取消</button>
@@ -191,8 +198,9 @@ import StatCard from "../components/StatCard.vue";
 import { ElPagination } from "element-plus";
 import { reactive, ref, onMounted, watch } from "vue";
 import { getCoachList, addCoach, updateCoach, deleteCoach, getCoachStat } from "../api/coach";
-import {getCoachStatistics} from '../api/statistics.js'
+import { list_course_schedules } from "../api/courses.js";
 import { useToast } from "../composables/useToast";
+import { confirmDialog } from "../composables/useConfirm.js";
 
 const toast = useToast();
 
@@ -268,14 +276,49 @@ function resetSearch(){
   loadData()
 }
 
-function calcPageStat() {
-  const validList = list.value;
-  stat_sum_hours.value = validList.reduce((s, i) => s + (i.hours || 0), 0);
-  const scoreArr = validList.filter((i) => i.score);
-  stat_avg_score.value = scoreArr.length
-    ? (scoreArr.reduce((s, i) => s + i.score, 0) / scoreArr.length).toFixed(2)
-    : 0;
-  stat_total_coach.value = total.value;
+/**
+ * 统计卡片：课时与评分取全部教练，不能只把「当前这一页」加起来 ——
+ * 那样翻一页数字就跟着变，写在卡片上会被当成全馆口径。
+ * 教练数量远小于 100，一次取全量即可。
+ */
+async function loadCoachesStat() {
+  try {
+    const res = await getCoachList({ page: 1, page_size: 100 });
+    const all = res.data?.items || [];
+    stat_total_coach.value = res.data?.total ?? all.length;
+    stat_sum_hours.value = all.reduce((s, i) => s + (i.hours || 0), 0);
+    const scoreArr = all.filter((i) => i.score);
+    stat_avg_score.value = scoreArr.length
+      ? Number((scoreArr.reduce((s, i) => s + i.score, 0) / scoreArr.length).toFixed(2))
+      : 0;
+  } catch (err) {
+    console.warn("加载教练统计失败：", err?.friendlyMessage || err);
+  }
+}
+
+/**
+ * 今日排课：取全部教练在排课窗口内的课表，数出落在今天的节数。
+ *
+ * 原来这张卡片只有 ref(0) 从头到尾没人赋值 —— 无论哪天打开都显示 0 节。
+ * 这里复用「全部教练排课」接口（返回今天起 4 周的课），只统计今天那一天。
+ */
+async function loadTodayScheduleCount() {
+  try {
+    const res = await list_course_schedules({});
+    const today = todayLocal();
+    stat_today_course.value = (res.data || []).filter((s) => s.schedule_date === today).length;
+  } catch (err) {
+    // 统计卡片取不到不影响教练列表本身，不打断页面
+    console.warn("加载今日排课数失败：", err?.friendlyMessage || err);
+  }
+}
+
+/** 本地日期 YYYY-MM-DD（不能用 toISOString，那是 UTC，晚上会差一天） */
+function todayLocal() {
+  const d = new Date();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${m}-${day}`;
 }
 
 async function loadData() {
@@ -283,7 +326,6 @@ async function loadData() {
     const res = await getCoachList(queryForm.value);
     list.value = res.data.items;
     total.value = res.data.total;
-    calcPageStat();
   } catch (e) {
     toast.show("加载教练列表失败");
   }
@@ -298,6 +340,9 @@ function openAddCoach() {
   coachForm.status = "在职";
   coachForm.salary = 0
   coachForm.hire_date = new Date().toISOString().split("T")[0];
+  // 课时与评分要归零：不重置的话，「先编辑 A、再新增 B」时 B 会带着 A 的课时和评分入职
+  coachForm.hours = 0;
+  coachForm.score = 5;
   showCoachModal.value = true;
 }
 
@@ -313,32 +358,48 @@ function openEditCoach(item) {
 }
 
 async function saveCoach() {
+  // 先存下模式：提示文案不能依赖请求前后的 isEditCoach 状态
+  const editing = isEditCoach.value
   try {
     const submitData = {...coachForm}
-    if(isEditCoach.value){
-      console.log(submitData)
+    if (editing) {
       await updateCoach(editCoachId.value, submitData);
       toast.show("修改保存成功");
-    }else{
-      console.log(submitData)
-      await addCoach(submitData);
-      toast.show("教练新增成功");
+    } else {
+      const res = await addCoach(submitData);
+      // 新增会连带开一个登录账号，后端把「账号 + 初始密码」写在 msg 里，
+      // 用后端的提示，管理员才能当面把凭据告诉新教练。
+      toast.show(res.msg || "教练新增成功");
     }
     closeCoachModal();
     await loadData();
   } catch (err) {
-    toast.show("操作失败");
+    toast.show(err.friendlyMessage || "操作失败", "error");
   }
 }
 
 async function handleDeleteCoach(item) {
-  if (!confirm(`确认删除教练【${item.name}】吗？`)) return;
+  // 删除是级联的：教练名下的课程、排班、训练计划都会被一起删掉，
+  // 学员只解除归属。用应用内确认框把后果和规模都摆出来，别让用户在
+  // 浏览器原生 confirm 那个小框里凭记忆点「确定」。
+  const ok = await confirmDialog({
+    title: "删除教练",
+    tone: "danger",
+    message:
+      "该教练名下的课程、排班、训练计划会一并删除，名下学员将变为「未分配」。\n此操作不可恢复。",
+    details: [
+      { label: "教练", value: item.name },
+      { label: "联系方式", value: item.phone || "—" }
+    ],
+    confirmText: "删除"
+  });
+  if (!ok) return;
   try {
-    await deleteCoach(item.id);
-    toast.show("删除成功");
+    const res = await deleteCoach(item.id);
+    toast.show(res.msg || "删除成功");
     await loadData();
   } catch (err) {
-    toast.show("删除失败");
+    toast.show(err.friendlyMessage || err.msg || "删除失败", "error");
   }
 }
 
@@ -355,6 +416,8 @@ async function openCoachDetail(item) {
 
 onMounted(async () => {
   await loadData();
+  // 统计卡片与列表分开取：卡片是全馆口径，不受分页与搜索影响
+  await Promise.all([loadCoachesStat(), loadTodayScheduleCount()]);
 });
 </script>
 

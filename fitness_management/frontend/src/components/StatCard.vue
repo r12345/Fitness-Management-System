@@ -11,7 +11,8 @@
 <script setup>
 defineProps({
   label: String,
-  value: String,
+  // 统计值既可能是整数也可能是小数，只声明 String 会让 Vue 每次都报类型警告
+  value: [String, Number],
   unit: String,
   icon: String,
   tone: String

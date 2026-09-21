@@ -7,12 +7,14 @@ import DashboardView from "../views/DashboardView.vue";
 import ReceptionView from "../views/ReceptionView.vue";
 import MembersView from "../views/MembersView.vue";
 import CoachesView from "../views/CoachesView.vue";
+import StaffView from "../views/StaffView.vue";
 import CoursesView from "../views/CoursesView.vue";
 import EquipmentView from "../views/EquipmentView.vue";
 import SystemView from "../views/SystemView.vue";
 import MemberCenterView from "../views/MemberCenterView.vue";
 import CoachPanelView from "../views/CoachPanelView.vue";
 import AppointmentList from "../views/AppointmentList.vue";
+// AgentView 已不再挂路由：AI 助手的入口是全局悬浮球，页面版属重复入口
 
 const routes = [
   {
@@ -42,7 +44,9 @@ const routes = [
         path: "reception",
         name: "reception",
         component: ReceptionView,
-        meta: { roles: ["admin", "reception"], title: "前台运营工作台" }
+        // 前台工作台只给前台：超级管理员是管全局的，接待台不是他的职责。
+        // 原来这里是 ["admin","reception"]，管理员的侧栏里就多出一个「前台运营工作台」。
+        meta: { roles: ["reception"], title: "前台运营工作台" }
       },
       {
         path: "members",
@@ -55,6 +59,13 @@ const routes = [
         name: "coaches",
         component: CoachesView,
         meta: { roles: ["admin"], title: "教练管理" }
+      },
+      {
+        path: "staff",
+        name: "staff",
+        component: StaffView,
+        // 运营（前台）人员的账号由超级管理员统一开，前台自己不需要这一页
+        meta: { roles: ["admin"], title: "运营人员" }
       },
       {
         path: "courses",
@@ -78,20 +89,28 @@ const routes = [
         path: "member",
         name: "member",
         component: MemberCenterView,
-        meta: { roles: ["admin", "member"], title: "会员个人中心" }
+        // 会员中心接口按当前登录用户查会员档案，非会员角色没有档案，会 404
+        meta: { roles: ["member"], title: "会员个人中心" }
       },
       {
         path: "coach",
         name: "coach",
         component: CoachPanelView,
-        meta: { roles: ["admin", "coach"], title: "教练工作台" }
+        // 后端 get_current_coach 只放行 role=coach，其他角色一律 403
+        meta: { roles: ["coach"], title: "教练工作台" }
       },
       {
         path: "appointments",
         name: "appointment",
         component: AppointmentList,
-        meta: { roles: ["admin", "coach", "reception"], title: "预约管理" }
+        // 后端 /appointments 对会员只返回本人记录、取消时也校验归属，
+        // 所以会员可以进这一页（页面里本来就有「我的预约」分支，之前路由却被挡住了）
+        meta: { roles: ["admin", "coach", "reception", "member"], title: "预约管理" }
       }
+      // 这里原本还有一个 /agent「AI 助手」页面。
+      // 它不承载任何业务，真正的入口是全局悬浮球（AgentFab，挂在 AppLayout 上，
+      // 登录后每个页面右下角都有）。页面版只是重复的入口，已下线；
+      // AgentView.vue 文件保留未使用，确认不需要后可删。
 
     ]
   },
@@ -133,6 +152,14 @@ router.beforeEach((to) => {
   if (isPublic) {
     const home = role ? homeOfRole(role) : "";
     // 角色缺失时 homeOfRole 会回落到 /login，此时不再重定向，避免自我循环
+    return home && home !== to.path ? home : true;
+  }
+
+  // "/" 只是承载布局的父路由，自身没有页面内容。
+  // 走到这里说明回跳目标落回了根路径（例如登录页带的 redirect=/），
+  // 必须按角色送回各自首页，否则会停在「有侧栏、主区域全空」的空白页。
+  if (to.path === "/") {
+    const home = homeOfRole(role);
     return home && home !== to.path ? home : true;
   }
 

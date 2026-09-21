@@ -53,6 +53,20 @@ export function isRegisterSuccess(res) {
 }
 
 /**
+ * 修改自己的登录密码（四个角色通用）。
+ *
+ * 只提交当前密码与新密码：改的是「当前登录的这个账号」，
+ * 请求体里没有用户名，也就没有「改别人密码」的口子。
+ */
+export function changePassword(old_password, new_password) {
+  return request({
+    url: "/auth/password",
+    method: "put",
+    data: { old_password, new_password }
+  })
+}
+
+/**
  * 从响应中取出提示文案。
  * 统一信封用 msg，登录失败、注册等旧接口用 message。
  */

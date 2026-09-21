@@ -132,7 +132,13 @@
             </div>
             <div class="field"><label>采购时间</label><input v-model="form.purchase_date" type="date"></div>
             <div class="field"><label>价格</label><input v-model.number="form.price" type="number"></div>
-            <div class="field"><label>状态</label><input v-model="form.status" type="text"></div>
+            <div class="field"><label>状态</label>
+              <select v-model="form.status">
+                <option value="正常">正常</option>
+                <option value="维修">维修</option>
+                <option value="报废">报废</option>
+              </select>
+            </div>
             <div class="field"><label>备注</label><input v-model="form.remark" type="text"></div>
           </div>
         </div>
@@ -211,6 +217,7 @@
 <script setup>
 import {computed, onMounted, reactive, ref, watch} from "vue";
 import { useToast } from "../composables/useToast";
+import { confirmDialog } from "../composables/useConfirm.js";
 import StatCard from "../components/StatCard.vue";
 import {
   create_equipment,
@@ -224,9 +231,10 @@ import {useUserStore} from "../stores/user.js";
 import {getEquipmentStatistics} from "../api/statistics.js";
 const userStore = useUserStore();
 const toast = useToast();
-const role = userStore.role;
-const canManage = role === "admin";
-const isReception = role === "reception";
+// 用 computed 而不是解构一次 role：解构出来的是快照，同页切换身份不会跟着变
+const role = computed(() => userStore.role);
+const canManage = computed(() => role.value === "admin");
+const isReception = computed(() => role.value === "reception");
 
 const list = ref([]);
 const showAdd = ref(false);
@@ -265,14 +273,18 @@ const searchForm = reactive({
 })
 let searchTimer = null;
 
+// 条件一变就必须回到第 1 页：原来是带着旧页码重新请求，
+// 在第 2 页筛一个只有 1 条结果的分类，看到的就是空列表
 watch(() => searchForm.keyword, () => {
   if(searchTimer) clearTimeout(searchTimer)
   searchTimer = setTimeout(()=>{
+    searchForm.page = 1
     fetchEquipmentList()
   }, 300)
 })
 
 watch([()=>searchForm.category, ()=>searchForm.status], ()=>{
+  searchForm.page = 1
   fetchEquipmentList()
 })
 
@@ -284,11 +296,13 @@ async function fetchEquipmentList(){
     page: searchForm.page,
     page_size: searchForm.page_size
   }
-  console.log("请求参数", params)
-  const res = await getEquipmentList(params);
-  console.log("请求结果", res)
-  total.value = res.data.total
-  list.value = res.data.items
+  try {
+    const res = await getEquipmentList(params);
+    total.value = res.data.total
+    list.value = res.data.items
+  } catch (err) {
+    toast.show(err.friendlyMessage || "加载器材列表失败", "error")
+  }
 }
 
 function resetSearch(){
@@ -337,36 +351,51 @@ function closeModal(){
 }
 
 async function saveEquipment() {
+  // 先把模式存下来：closeModal() 会把 editId 清成 null，
+  // 原来在提示里读 editId.value 永远是 null，编辑保存后也显示「器材已新增」
+  const editingId = editId.value
   try{
-    let res
-    if(editId.value){
-      res = await update_equipment(editId.value, form)
-    }else{
-      res = await create_equipment(form)
+    const res = editingId
+      ? await update_equipment(editingId, form)
+      : await create_equipment(form)
+    if (res && typeof res.code !== "undefined" && res.code !== 0) {
+      toast.show(res.msg || "保存失败", "error")
+      return
     }
-    if (res.code === 0) {
-      await fetchEquipmentList()
-      closeModal()
-      toast.show(editId.value ? "器材已修改" : "器材已新增");
-    }
+    await fetchEquipmentList()
+    await getStatistics()
+    closeModal()
+    toast.show(editingId ? "器材已修改" : "器材已新增");
   }catch(err){
-    toast.show(editId.value ? "修改失败" : "新增失败");
+    toast.show(err.friendlyMessage || (editingId ? "修改失败" : "新增失败"), "error");
   }
 }
 
 async function remove(item) {
+  // 原来是点一下就删，没有二次确认；器材的报修 / 保养记录会随之一并删除
+  const ok = await confirmDialog({
+    title: "删除器材",
+    tone: "danger",
+    message: "该器材的报修记录与保养记录会一并删除，此操作不可恢复。",
+    details: [
+      { label: "器材", value: item.name },
+      { label: "型号", value: item.model || "—" },
+      { label: "位置", value: item.location || "—" }
+    ],
+    confirmText: "删除"
+  });
+  if (!ok) return;
   try {
     const res = await delete_equipment(item.id)
-    console.log(res)
     if (res.code === 0) {
       await fetchEquipmentList()
+      await getStatistics()
       toast.show("器材已删除");
     } else {
-      toast.show(res.msg || "删除失败")
+      toast.show(res.msg || "删除失败", "error")
     }
   } catch (err) {
-    console.error(err)
-    toast.show("请求异常，删除失败")
+    toast.show(err.friendlyMessage || "请求异常，删除失败", "error")
   }
 }
 
@@ -382,16 +411,25 @@ async function openRepair(item) {
 }
 
 async function submitRepair() {
-  console.log(repair_data)
-  const res = await create_repair(repairTarget.value.id,repair_data);
-  console.log(res)
-  repairTarget.value.status = "维修";
-  repairTarget.value = null;
-  repair_data.repair_time = '';
-  repair_data.description = '';
-  repair_data.cost = 0;
-  repair_data.remark = '';
-  toast.show("报修已登记");
+  try {
+    const res = await create_repair(repairTarget.value.id, repair_data);
+    if (res && typeof res.code !== "undefined" && res.code !== 0) {
+      toast.show(res.msg || "报修登记失败", "error")
+      return
+    }
+    repairTarget.value = null;
+    repair_data.repair_time = '';
+    repair_data.description = '';
+    repair_data.cost = 0;
+    repair_data.remark = '';
+    // 报修接口会顺带把器材状态改成「维修」，但表格还是旧数据，
+    // 原来只改了本地那一行对象、连刷新都没有，列表上看不出任何变化
+    await fetchEquipmentList()
+    await getStatistics()
+    toast.show("报修已登记");
+  } catch (err) {
+    toast.show(err.friendlyMessage || "报修登记失败", "error")
+  }
 }
 
 // =====================保养相关方法【新增】=====================
@@ -420,7 +458,6 @@ const status_type=ref({
 
 async function getStatistics(){
   const res = await getEquipmentStatistics()
-  console.log(res)
   equipmentTotal.value = res.data.total
   // 重置归零
   status_type.value.normal = 0
@@ -447,16 +484,14 @@ async function submitMaintenance(){
   }
   try{
     const res = await create_maintenance(maintainTarget.value.id, maintainForm)
-    console.log(res)
     if(res.code === 0){
       toast.show("保养记录保存成功")
       closeMaintainModal()
     }else{
-      toast.show(res.msg || "保养记录保存失败")
+      toast.show(res.msg || "保养记录保存失败", "error")
     }
   }catch (e){
-    console.error(e)
-    toast.show("请求异常，提交保养失败")
+    toast.show(e.friendlyMessage || "请求异常，提交保养失败", "error")
   }
 }
 

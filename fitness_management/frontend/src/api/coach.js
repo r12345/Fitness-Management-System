@@ -5,7 +5,7 @@ import request from './request';
 //9.1 教练分页列表
 export function getCoachList(data) {
   return request({
-    url: '/coaches/',
+    url: '/coaches',
     method: 'get',
     params:{
         keyword:data.keyword,

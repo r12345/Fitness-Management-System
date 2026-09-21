@@ -370,7 +370,14 @@ function validateRegister() {
 /** 登录后的落地页：优先回跳来时的页面，否则按角色首页 */
 function resolveLanding(role) {
   const redirect = route.query.redirect;
-  if (typeof redirect === "string" && redirect.startsWith("/") && !redirect.startsWith("//")) {
+  // "/" 只是承载布局的父路由，自身没有页面内容，不能作为回跳目标，
+  // 否则登录成功后会停在一片空白上（表现为「工作台点不开」）
+  if (
+    typeof redirect === "string" &&
+    redirect.startsWith("/") &&
+    !redirect.startsWith("//") &&
+    redirect !== "/"
+  ) {
     return redirect;
   }
   // 后端返回的 home 固定是 /dashboard，对教练和会员并不合适，这里按角色自行决定

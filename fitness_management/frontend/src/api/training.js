@@ -26,6 +26,14 @@ export function list_my_checkins(){
     })
 }
 
+/** 当前在店状态：刷新页面后用它恢复「到店/离店」按钮，只有离店打卡才会变回未到店 */
+export function get_current_checkin(){
+    return request({
+        url: `/training/checkin/current`,
+        method: 'get',
+    })
+}
+
 export function create_training_records(data){
     return request({
         url: `/training/records`,

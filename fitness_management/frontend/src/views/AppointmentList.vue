@@ -25,20 +25,21 @@
         <input
           v-model="queryForm.date"
           type="date"
-          placeholder="选择预约日期"
+          placeholder="按上课日期筛选"
           style="padding:6px 8px;width:200px;"
         />
         <button class="btn btn-primary" @click="loadData">搜索</button>
         <button class="btn btn-secondary" @click="resetSearch">重置</button>
-        <!-- ✅ 新增预约按钮：只有管理员、前台可以看到 -->
-
       </div>
 
       <div class="tabs">
+        <!-- tab 的 key 直接复用后端状态值。原来按钮传的是「已预约」而高亮判断写的是
+             'reserved'，两边对不上，任何 tab 都不会高亮 -->
         <button class="tab-btn" :class="{ active: activeTab === 'all' }" type="button" @click="handleTabChange('all')">全部预约</button>
-        <button class="tab-btn" :class="{ active: activeTab === 'reserved' }" type="button" @click="handleTabChange('已预约')">已预约</button>
-        <button class="tab-btn" :class="{ active: activeTab === 'checked' }" type="button" @click="handleTabChange('已签到')">已签到</button>
-        <button class="tab-btn" :class="{ active: activeTab === 'canceled' }" type="button" @click="handleTabChange('已取消')">已取消</button>
+        <button class="tab-btn" :class="{ active: activeTab === '待预约' }" type="button" @click="handleTabChange('待预约')">待预约</button>
+        <button class="tab-btn" :class="{ active: activeTab === '已预约' }" type="button" @click="handleTabChange('已预约')">已预约</button>
+        <button class="tab-btn" :class="{ active: activeTab === '已签到' }" type="button" @click="handleTabChange('已签到')">已签到</button>
+        <button class="tab-btn" :class="{ active: activeTab === '已取消' }" type="button" @click="handleTabChange('已取消')">已取消</button>
       </div>
 
       <div class="panel-body no-padding">
@@ -47,30 +48,39 @@
             <thead>
               <tr>
                 <th>预约ID</th>
+                <th>会员</th>
                 <th>课程名称</th>
                 <th>授课教练</th>
-                <th>预约时间</th>
+                <th>上课时间</th>
+                <th>上课地点</th>
                 <th>预约状态</th>
+                <th>排课状态</th>
                 <th>备注</th>
                 <th>操作</th>
               </tr>
             </thead>
             <tbody>
+              <tr v-if="!currentList.length">
+                <td colspan="10" style="text-align:center;color:#999;">暂无预约记录</td>
+              </tr>
               <tr v-for="item in currentList" :key="item.id">
                 <td>{{ item.id }}</td>
+                <td>{{ item.member || '-' }}<span v-if="item.phone" style="color:#999;"> · {{ item.phone }}</span></td>
                 <td>{{ item.course }}</td>
                 <td>{{ item.coach || '-' }}</td>
-                <td>{{ item.appointment_time }}</td>
+                <td>{{ classTimeOf(item) }}</td>
+                <td>{{ item.schedule_location || '-' }}</td>
                 <td><span class="badge" :class="statusClass(item.status)">{{ item.status }}</span></td>
+                <td><span class="badge" :class="scheduleStatusClass(item.schedule_status)">{{ item.schedule_status || '—' }}</span></td>
                 <td>{{ item.remark || '-' }}</td>
                 <td>
                   <div class="page-actions">
-                    <!-- 签到：仅已预约状态可签到，教练/前台权限 -->
-                    <button v-if="canManage && item.status === '已预约'" class="btn btn-primary btn-sm" type="button" @click="handleCheckin(item)">签到</button>
-                    <!-- 取消预约：仅已预约状态，会员/前台/管理员 -->
-                    <button v-if="(canManage || role === 'member') && item.status === '已预约'" class="btn btn-danger btn-sm" type="button" @click="handleCancel(item)">取消预约</button>
+                    <!-- 签到：未签到的预约（「待预约」是历史同义状态）可签到，教练/前台权限 -->
+                    <button v-if="canManage && isPending(item.status)" class="btn btn-primary btn-sm" type="button" @click="handleCheckin(item)">签到</button>
+                    <!-- 取消预约：未签到状态下会员/前台/管理员均可 -->
+                    <button v-if="(canManage || role === 'member') && isPending(item.status)" class="btn btn-danger btn-sm" type="button" @click="handleCancel(item)">取消预约</button>
                     <!-- 冲突处理：管理员/前台 -->
-                    <button v-if="isAdminOrReception && item.status === '已预约'" class="btn btn-secondary btn-sm" type="button" @click="openResolve(item)">冲突处理</button>
+                    <button v-if="isAdminOrReception && isPending(item.status)" class="btn btn-secondary btn-sm" type="button" @click="openResolve(item)">冲突处理</button>
                   </div>
                 </td>
               </tr>
@@ -115,7 +125,7 @@
       </div>
     </div>
 
-    <!-- ✅ 新增预约弹窗 -->
+    <!-- 新增预约弹窗 -->
     <div v-if="showCreate" class="modal-mask" @click.self="showCreate = false">
       <div class="modal">
         <div class="modal-header">
@@ -124,16 +134,25 @@
         </div>
         <div class="modal-body">
           <div class="field">
-            <label>会员ID</label>
-            <input v-model="createForm.member_id" type="number" placeholder="输入会员ID"/>
+            <!-- 原来是手填「会员ID」，得先知道库里的编号才能预约。改成从会员接口拉数据渲染下拉框。 -->
+            <label>会员</label>
+            <select v-model.number="createForm.member_id">
+              <option :value="null" disabled>请选择会员</option>
+              <option v-for="m in memberOptions" :key="m.id" :value="m.id">{{ memberLabel(m) }}</option>
+            </select>
           </div>
           <div class="field">
-            <label>课程ID</label>
-            <input v-model="createForm.course_id" type="number" placeholder="输入课程ID"/>
+            <!-- 同理：课程也改成下拉框，并且选中后自动带出该课程的上课时间 -->
+            <label>课程</label>
+            <select v-model.number="createForm.course_id" @change="onCourseChange">
+              <option :value="null" disabled>请选择课程</option>
+              <option v-for="c in courseOptions" :key="c.id" :value="c.id">{{ courseLabel(c) }}</option>
+            </select>
           </div>
           <div class="field">
             <label>预约时间</label>
             <input v-model="createForm.appointment_time" type="datetime-local"/>
+            <p v-if="selectedCourseTime" class="field-hint">已按课程排课时间自动填入，可微调</p>
           </div>
 
         </div>
@@ -148,8 +167,8 @@
 
 <script setup>
 import {computed, reactive, ref, onMounted} from "vue";
-import {useAuth} from "../composables/useAuth";
 import {useToast} from "../composables/useToast";
+import {confirmDialog} from "../composables/useConfirm.js";
 import {
   list_appointments,
   checkin_appointment,
@@ -158,24 +177,30 @@ import {
   resolve_appointment
 } from "../api/appointments.js";
 import {useUserStore} from "../stores/user.js";
+import {getMemberList} from "../api/member.js";
+import {list_courses} from "../api/courses.js";
+import {isPendingStatus, statusClass, scheduleStatusClass} from "../utils/appointmentStatus.js";
 
 const useStore = useUserStore();
-const auth = useAuth();
 const toast = useToast();
-const role = useStore.role;
+// 用 computed：解构出来的 role 是一次性快照，同页切换身份不会跟着更新
+const role = computed(() => useStore.role);
 
 // 权限
-const canManage = role === "admin" || role === "reception" || role === "coach";
-const isAdminOrReception = role === "admin" || role === "reception";
+const canManage = computed(() => ["admin", "reception", "coach"].includes(role.value));
+const isAdminOrReception = computed(() => role.value === "admin" || role.value === "reception");
+
+/** 「待预约」是「已预约」的历史同义写法，两种都算未签到 */
+const isPending = isPendingStatus;
 
 const activeTab = ref("all");
 const showResolve = ref(false);
-const showCreate = ref(false); // ✅ 新增弹窗开关
+const showCreate = ref(false);
 const selectedAppointment = ref(null);
 
 // 查询参数
 const queryForm = reactive({
-  keyword: null,
+  keyword: "",
   date: "",
   status: "",
   page: 1,
@@ -192,45 +217,73 @@ const resolveForm = ref({
   remark: ""
 });
 
-// ✅ 新增预约表单
+// 新增预约表单
 const createForm = ref({
   member_id: null,
   course_id: null,
   appointment_time: "",
 });
 
+// 下拉框数据源：会员、课程都从各自接口拉真实数据，不让用户手输编号
+const memberOptions = ref([]);
+const courseOptions = ref([]);
+
+/** 下拉框显示文案：把「姓名 · 手机号」拼好，避免在 <option> 里嵌套条件模板 */
+function memberLabel(member) {
+  return member.phone ? `${member.name} · ${member.phone}` : member.name;
+}
+
+function courseLabel(course) {
+  return course.coach_name ? `${course.name} · ${course.coach_name}` : course.name;
+}
+
+/** 当前选中课程在库里的排课时间（datetime-local 格式），用于提示是否已自动填入 */
+const selectedCourseTime = computed(() => {
+  const course = courseOptions.value.find(c => c.id === createForm.value.course_id);
+  return course?.start_time_raw || "";
+});
+
 const pageTitle = computed(() => {
-  if (role === "member") return "我的预约";
+  if (role.value === "member") return "我的预约";
   return "预约管理";
 });
 const pageDesc = computed(() => {
-  if (role === "member") return "查看我的课程预约，可取消未开始预约";
+  if (role.value === "member") return "查看我的课程预约，可取消未开始预约";
   return "管理会员课程预约、签到、预约冲突处理";
 });
 
-// 状态样式
-function statusClass(status) {
-  if (status === "已预约") return "info";
-  if (status === "已签到") return "success";
-  if (status === "已取消") return "muted";
-  return "";
+// 状态样式统一放在 utils/appointmentStatus.js，避免多个页面各写一套、状态值还对不上
+
+/**
+ * 预约的「上课时间」。
+ *
+ * 优先取排课的最新日期 + 时段 —— 教练把这一次课挪到别的日子/时段后，
+ * 这里显示的就是新时间；关联不到排课（窗口外的历史预约）才退回预约快照
+ * appointment_time。口径与会员中心「我的预约」保持一致，两端不会各说各的。
+ */
+function classTimeOf(item) {
+  if (!item) return "-";
+  if (item.schedule_date) {
+    const start = item.schedule_start ?? "";
+    const end = item.schedule_end ? `~${item.schedule_end}` : "";
+    return `${item.schedule_date} ${start}${end}`.trim() || "-";
+  }
+  return item.appointment_time || "-";
 }
 
 // 加载预约列表
 async function loadData() {
   try {
-    const params = {...queryForm};
-    console.log(queryForm)
-    Object.keys(params).forEach(k => {
-      if (params[k] === "") params[k] = undefined;
+    // 空字符串要在发请求前剔掉，否则会被当成有效的筛选条件
+    const params = {};
+    Object.keys(queryForm).forEach(k => {
+      if (queryForm[k] !== "") params[k] = queryForm[k];
     });
     const res = await list_appointments(params);
-    console.log(res)
     tableData.value = res.data.items;
     total.value = res.data.total;
   } catch (err) {
-    toast.show("加载预约列表失败", "error");
-    console.error(err);
+    toast.show(err.friendlyMessage || "加载预约列表失败", "error");
   }
 }
 
@@ -275,18 +328,31 @@ async function handleCheckin(item) {
     toast.show("签到成功");
     await loadData();
   } catch (err) {
-    toast.show("签到失败", "error");
+    toast.show(err.friendlyMessage || "签到失败", "error");
   }
 }
 
 // 取消预约
 async function handleCancel(item) {
+  // 取消预约原来没有确认，管理端一点就退掉会员的预约，容易误操作
+  const ok = await confirmDialog({
+    title: "取消预约",
+    tone: "danger",
+    message: "取消后该预约席位会被释放，如需上课请重新预约。",
+    details: [
+      { label: "会员", value: item.member || "—" },
+      { label: "课程", value: item.course || "—" },
+      { label: "时间", value: classTimeOf(item) }
+    ],
+    confirmText: "取消预约"
+  });
+  if (!ok) return;
   try {
     await cancel_appointment(item.id);
     toast.show("预约已取消");
     await loadData();
   } catch (err) {
-    toast.show("取消预约失败", "error");
+    toast.show(err.friendlyMessage || "取消预约失败", "error");
   }
 }
 
@@ -307,46 +373,64 @@ async function submitResolve() {
     });
     toast.show("预约信息已更新");
     showResolve.value = false;
-    loadData();
+    await loadData();
   } catch (err) {
-    toast.show("更新失败", "error");
+    toast.show(err.friendlyMessage || "更新失败", "error");
   }
 }
 
-// ✅ 打开新增预约弹窗，清空表单
+/** 拉取下拉框数据（会员 / 课程）。只有 admin、reception 能打开这个弹窗，对应后端也放行这两个角色 */
+async function loadOptions() {
+  try {
+    const [memberRes, courseRes] = await Promise.all([
+      getMemberList({ page: 1, page_size: 100 }),
+      list_courses({ page: 1, page_size: 100 })
+    ]);
+    memberOptions.value = memberRes.data?.items || [];
+    courseOptions.value = courseRes.data?.items || [];
+  } catch (err) {
+    toast.show(err.friendlyMessage || "加载会员/课程列表失败", "error");
+  }
+}
+
+/** 选中课程后把上课时间自动带出来，避免手填一个跟课程对不上的时段 */
+function onCourseChange(courseId) {
+  const course = courseOptions.value.find(c => c.id === courseId);
+  if (course?.start_time_raw) {
+    createForm.value.appointment_time = course.start_time_raw;
+  }
+}
+
+// 打开新增预约弹窗，清空表单并加载下拉选项
 function openCreateModal() {
   createForm.value = {
     member_id: null,
     course_id: null,
-    appointment_time: "",
+    appointment_time: ""
   };
   showCreate.value = true;
+  loadOptions();
 }
 
-// ✅ 提交新增预约
+// 提交新增预约
 async function submitCreate() {
   if (!createForm.value.member_id || !createForm.value.course_id || !createForm.value.appointment_time) {
-    toast.show("会员ID、课程ID、预约时间不能为空", "error");
+    toast.show("请选择会员、课程并填写预约时间", "error");
     return;
   }
   try {
-    // ✅ 补全秒数，转成 "2026-09-12 19:00:00" 标准格式
+    // <input type="datetime-local"> 给的是 2026-09-12T19:00，补上秒数才符合后端格式
     const timeStr = createForm.value.appointment_time.replace("T", " ") + ":00";
-    const payload = {
+    await create_appointment({
       member_id: Number(createForm.value.member_id),
       course_id: Number(createForm.value.course_id),
-      appointment_time: timeStr,
-      remark: createForm.value.remark || ""
-    };
-    console.log(createForm.value)
-    await create_appointment(payload);
+      appointment_time: timeStr
+    });
     toast.show("新增预约成功");
     showCreate.value = false;
-    loadData();
+    await loadData();
   } catch (err) {
-    // ✅ 把后端返回的具体错误提示给用户
-    const msg = err.response?.data?.detail || "新增预约失败";
-    toast.show(msg, "error");
+    toast.show(err.friendlyMessage || "新增预约失败", "error");
   }
 }
 

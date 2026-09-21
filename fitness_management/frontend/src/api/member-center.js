@@ -21,6 +21,14 @@ export function getMyCourses(){
   })
 }
 
+/** 会员可预约的排课：全部教练、从今天起往后 4 周的排课（含课程/教练/时间/地点/状态） */
+export function getUpcomingSchedules(){
+  return request({
+    url: '/member_center/schedules',
+    method: 'get'
+  })
+}
+
 
 export function editProfile(data){
   return request({

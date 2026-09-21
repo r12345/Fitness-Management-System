@@ -28,12 +28,23 @@ export function list_system_logs(data) {
         method: 'get',
         params:{
             log_type:data.log_type,
+            role:data.role,
             user:data.user,
             start_date:data.start_date,
             end_date:data.end_date,
             page:data.page,
             page_size:data.page_size
         }
+    })
+}
+
+
+// 日志筛选下拉的数据源：四个身份（固定）+ 库里实际出现过的操作类型及条数。
+// 类型不写死在前端，避免出现「选项和库里存的值对不上、一选就查空」。
+export function get_log_meta() {
+    return request({
+        url: '/system/logs/meta',
+        method: 'get'
     })
 }
 
