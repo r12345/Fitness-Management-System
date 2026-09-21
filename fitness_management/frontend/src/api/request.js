@@ -2,7 +2,7 @@ import axios from 'axios'
 
 // 后端地址。默认沿用本地开发端口，可通过 .env 里的 VITE_API_BASE_URL 覆盖，
 // 换端口或换机器时不必改源码。
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8001/api/v1'
+const BASE_URL = 'http://127.0.0.1:8001/api/v1'
 
 const instance = axios.create({
   baseURL: BASE_URL,
