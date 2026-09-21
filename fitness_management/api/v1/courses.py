@@ -26,7 +26,14 @@ _WEEKDAYS = ["周一", "周二", "周三", "周四", "周五", "周六", "周日
 def _fmt_start_time(dt):
     # 兼容字符串：如果是字符串，先转成 datetime 对象
     if isinstance(dt, str):
-        dt = datetime.strptime(dt, "%Y-%m-%d %H:%M:%S")
+        # 已经是 "周X HH:MM" 这种目标格式，直接返回
+        if any(dt.startswith(w) for w in _WEEKDAYS):
+            return dt
+        try:
+            dt = datetime.strptime(dt, "%Y-%m-%d %H:%M:%S")
+        except ValueError:
+            # 无法解析的字符串原样返回，避免 500
+            return dt
     return f"{_WEEKDAYS[dt.weekday()]} {dt.strftime('%H:%M')}"
 
 

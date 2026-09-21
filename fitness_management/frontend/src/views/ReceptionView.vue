@@ -65,7 +65,6 @@
 </template>
 
 <script setup>
-import { receptionData } from "../data/mock";
 import StatCard from "../components/StatCard.vue";
 import {get_recent_business_log, get_summary} from "../api/reception.js";
 import {onMounted} from "vue";

@@ -92,7 +92,6 @@
 <script setup>
 import {computed, onMounted, ref} from "vue";
 import { useAuth } from "../composables/useAuth";
-import { dashboardData } from "../data/mock";
 import StatCard from "../components/StatCard.vue";
 import TrendChart from "../components/TrendChart.vue";
 import { get_dashboard_trend,get_dashboard_summary,get_card_distribution,get_recent_appointments } from "../api/dashboard.js";

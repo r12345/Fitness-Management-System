@@ -228,7 +228,6 @@
 <script setup>
 import { reactive, ref, onMounted } from "vue";
 import { useToast } from "../composables/useToast";
-import { coachStudents } from "../data/mock";
 import { list_courses } from "../api/courses";
 import StatCard from "../components/StatCard.vue";
 import {

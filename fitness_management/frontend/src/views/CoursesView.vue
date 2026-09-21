@@ -101,7 +101,13 @@
         <div class="modal-body">
           <div class="form-grid">
             <div class="field full"><label>课程名称</label><input v-model="courseForm.name" type="text"></div>
-            <div class="field"><label>授课教练ID</label><input v-model.number="courseForm.coach_id" type="number"></div>
+            <div class="field">
+              <label>授课教练</label>
+              <select v-model.number="courseForm.coach_id">
+                <option :value="null">请选择教练</option>
+                <option v-for="c in coachOptions" :key="c.id" :value="c.id">{{ c.name }}（{{ Array.isArray(c.specialties) ? (c.specialties.length ? c.specialties.join('、') : '无') : (c.specialties || '无') }}）</option>
+              </select>
+            </div>
             <div class="field"><label>课程分类</label>
               <select v-model="courseForm.category">
                 <option value="瑜伽">瑜伽</option>
@@ -172,6 +178,7 @@ import { computed, reactive, ref, onMounted } from "vue";
 import { useAuth } from "../composables/useAuth";
 import { useToast } from "../composables/useToast";
 import {create_courses, delete_courses, list_courses, toggle_courses, update_courses,get_course_appointments} from "../api/courses.js";
+import { getCoachList } from "../api/coach.js";
 import { useUserStore } from "../stores/user.js";
 
 const useStore = useUserStore();
@@ -216,6 +223,8 @@ const courseForm = ref({
 
 const total = ref(0);
 const tableData = ref([]);
+// 教练下拉数据
+const coachOptions = ref([]);
 
 // 当前页面列表
 const currentList = computed(() => tableData.value);
@@ -259,6 +268,16 @@ async function loadData() {
   }
 }
 
+// 加载教练下拉选项（拉取足够多的教练供选择）
+async function loadCoaches() {
+  try {
+    const res = await getCoachList({ page: 1, page_size: 100 });
+    coachOptions.value = res.data.items || res.data || [];
+  } catch (err) {
+    console.error("加载教练列表失败", err);
+  }
+}
+
 // tab切换 后端course_type：group团课，private私教
 function handleTabChange(tab) {
   activeTab.value = tab;
@@ -294,6 +313,7 @@ function resetSearch() {
 
 // 打开新增
 function openAdd() {
+  if (!coachOptions.value.length) loadCoaches();
   isEdit.value = false;
   editCourseId.value = null;
   const form = courseForm.value;
@@ -312,6 +332,7 @@ function openAdd() {
 
 // =========打开编辑：回填行数据==========
 function openEdit(rowItem) {
+  if (!coachOptions.value.length) loadCoaches();
   isEdit.value = true;
   editCourseId.value = rowItem.id;
   // 回填后端返回全部字段
@@ -342,12 +363,19 @@ function formatLocalDateTime(dateObj) {
 async function saveCourse() {
   try {
     const form = courseForm.value;
+    // 统一处理 start_time：datetime-local 选了新时间（含 T）才转格式，否则保留原值
+    let startTime = form.start_time;
+    if (startTime && typeof startTime === 'string' && startTime.includes('T')) {
+      const d = new Date(startTime);
+      if (!isNaN(d.getTime())) startTime = formatLocalDateTime(d);
+    }
+
     const submitData = {
       name: form.name,
       course_type: form.course_type,
       category: form.category,
       coach_id: Number(form.coach_id),
-      start_time: form.start_time,
+      start_time: startTime,
       duration: Number(form.duration),
       max_count: Number(form.max_count),
       capacity: Number(form.capacity),
@@ -361,8 +389,6 @@ async function saveCourse() {
       toast.show("课程已更新");
     } else {
       // 新增模式 POST
-      const d = new Date(submitData.start_time);
-    submitData.start_time = formatLocalDateTime(d);
       await create_courses(submitData);
       toast.show("课程已新增");
     }
@@ -426,6 +452,7 @@ function book(item) {
 
 onMounted(() => {
   loadData();
+  loadCoaches();
   console.log(auth.currentRole.value)
 });
 </script>
