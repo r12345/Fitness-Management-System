@@ -39,8 +39,6 @@ from .config import settings
 
 logger = logging.getLogger(__name__)
 
-# 通过 JWT 换 OAuth Access Token 的接口（个人版与企业标准版）
-TOKEN_URL = "https://api.coze.cn/api/permission/oauth2/token"
 GRANT_TYPE = "urn:ietf:params:oauth:grant-type:jwt-bearer"
 # 扣子侧规定 JWT 自身的有效期不需要很长，10 分钟足够走完换取流程
 JWT_TTL_SECONDS = 600
@@ -119,7 +117,9 @@ def _exchange_access_token(jwt_token: str) -> dict:
         {"duration_seconds": settings.COZE_TOKEN_TTL_SECONDS, "grant_type": GRANT_TYPE}
     ).encode()
     request = urllib.request.Request(
-        TOKEN_URL,
+        # 个人版/企业标准版用默认地址；企业旗舰版多组织场景可在 .env 里覆盖
+        # COZE_TOKEN_URL=.../api/permission/oauth2/account/{account_id}/token
+        settings.COZE_TOKEN_URL,
         data=body,
         method="POST",
         headers={
