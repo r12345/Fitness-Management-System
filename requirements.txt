@@ -1,0 +1,20 @@
+# 后端运行依赖（版本取自项目 .venv，2026-09-21）
+#
+# 用法：python -m venv .venv && .venv/Scripts/pip install -r requirements.txt
+#
+# ⚠️ 不要安装 PyPI 上那个叫 `jose` 的包。
+#    `jose` 与 `python-jose` 共用同一个顶层包名（都往 site-packages/jose/ 里写），
+#    后装的会覆盖先装的。当前 .venv 里两个都装了，目录被 python-jose 3.5.0 覆盖，
+#    所以 `from jose import jwt` 现在是好的 —— 但这是巧合，换机器重装就可能踩坑。
+#    代码只 import jose 的 jwt/JWTError，那就是 python-jose。
+
+fastapi==0.141.1
+uvicorn==0.52.4
+SQLAlchemy==2.0.52
+aiomysql==0.3.2
+PyMySQL==1.2.0
+pydantic==2.13.4
+pydantic-settings==2.15.0
+passlib==1.7.4
+python-jose[cryptography]==3.5.0
+python-dotenv==1.2.3

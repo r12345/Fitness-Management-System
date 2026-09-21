@@ -26,6 +26,11 @@ fitness_management/frontend/dist/
 .env.*
 !.env.example
 *.local.xml
+# 扣子 OAuth 应用的私钥（控制台下载的 private_key.pem）—— 泄露等于别人能冒充你的应用
+*.pem
+*.key
+# 数据库导出里含真实 password_hash，不能进仓库
+*.sql
 
 # ===== 操作系统 =====
 .DS_Store
