@@ -47,6 +47,10 @@
               <tr><th>时间</th><th>操作人</th><th>会员或器材</th><th>内容</th><th>支付方式</th></tr>
             </thead>
             <tbody>
+              <!-- 空态要写出来：表体一片空白时看不出是「今天没业务」还是接口挂了 -->
+              <tr v-if="!data2.length">
+                <td colspan="5" style="text-align:center;color:#999;">今日暂无业务动态</td>
+              </tr>
               <tr v-for="(item, index) in data2" :key="index">
                 <td>{{ item.time }}</td>
                 <td>{{ item.operator }}</td>
@@ -87,8 +91,12 @@ const data2 = ref(
 )
 
 async function get_log(){
-  const res = await get_recent_business_log()
-  data2.value = res.data.items
+  try {
+    const res = await get_recent_business_log()
+    data2.value = res.data.items || []
+  } catch (err) {
+    data2.value = []
+  }
 }
 
 async function get_sum(){

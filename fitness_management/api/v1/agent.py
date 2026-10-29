@@ -40,7 +40,9 @@ async def get_agent_token(user: User = Depends(get_current_user)):
             },
         )
 
-    session_name = session_name_for(user.id)
+    # 身份 = 角色 + 用户 ID：每个登录账号拿到自己的 session_name，
+    # 扣子就按它分开存会话 —— A 打开对话框看不到 B 说过的话。
+    session_name = session_name_for(user.id, user.role)
     try:
         token, expires_in = await issue_access_token(session_name)
     except CozeError as exc:

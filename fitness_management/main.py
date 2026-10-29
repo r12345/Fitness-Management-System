@@ -51,12 +51,12 @@ app.include_router(coach_panel_router)       # /api/v1/coach-panel      教练�
 app.include_router(appointments_router)      # /api/v1/appointments     预约管理         r
 app.include_router(training_router)          # /api/v1/training         训练打卡与运动记录 y
 app.include_router(equipment_router)         # /api/v1/equipment        器材管理        x
-app.include_router(statistics_router)        # /api/v1/statistics       运营数据
+app.include_router(statistics_router)        # /api/v1/statistics       运营数据        y
 app.include_router(consumptions_router)      # /api/v1/consumption      消费记录        x
-app.include_router(system_router)            # /api/v1/system           系统配置、日志与字典
-app.include_router(dashboard_router)         # /api/v1/dashboard        管理员数据大盘
-app.include_router(reception_router)         # /api/v1/reception        前台管理
-app.include_router(agent_router)             # /api/v1/agent            AI 助手（扣子令牌）
+app.include_router(system_router)            # /api/v1/system           系统配置、日志与字典r
+app.include_router(dashboard_router)         # /api/v1/dashboard        管理员数据大盘     y
+app.include_router(reception_router)         # /api/v1/reception        前台管理        x
+app.include_router(agent_router)             # /api/v1/agent            AI 助手（扣子令牌） r
 
 # 异常统一转换：业务异常走 {"code", "msg", "data"}，参数校验与兜底 500 走 {"detail"}
 app.add_exception_handler(BizError, biz_error_handler)

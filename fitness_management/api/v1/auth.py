@@ -19,6 +19,7 @@ from ...utils.res import success_response
 async def login(user_info:AuthRequest,db=Depends(get_db)):
     # 检查用户是否存在
     flag1 = await check_user_exists(user_info.username, db)
+
     if flag1 is False:
         return {"message": "用户不存在"}
     # 登录用户

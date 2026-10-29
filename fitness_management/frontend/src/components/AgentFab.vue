@@ -64,7 +64,7 @@
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from "vue";
 import { useCozeAgent } from "../composables/useCozeAgent";
 
-const { openAgent, preloadAgent } = useCozeAgent();
+const { openAgent, preloadAgent, authMode } = useCozeAgent();
 
 /** 球直径与贴边留白，与样式里的 .agent-fab 宽高必须一致 */
 const SIZE = 56;
@@ -226,6 +226,9 @@ function handleEnter() {
 const tipText = computed(() => {
   if (errorText.value) return errorText.value;
   if (loading.value) return "正在加载智能体…";
+  // 会话隔离降级是静默发生的，把状态写进气泡里，别让人以为每个人都是独立的
+  if (authMode.value === "isolated") return "AI 助手 · 独立会话 · 按住可拖动";
+  if (authMode.value === "shared") return "AI 助手 · 共享会话 · 按住可拖动";
   return "AI 助手 · 按住可拖动";
 });
 

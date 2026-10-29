@@ -67,8 +67,13 @@ async def create_appointment_api(
 
     appointment, member, course = await create_appointment(db, data, member_id=member_id)
     await db.commit()
+    # 时段撞车时这条预约落成「待预约」：单下成功了，但要等前台处理冲突才能算数
+    if appointment.status == "待预约":
+        msg = "该时段你已有预约，已登记为「待预约」，请到前台处理冲突"
+    else:
+        msg = "预约成功"
     return success_response(
-        msg="预约成功",
+        msg=msg,
         data={
             "appointment_id": appointment.id,
             "member": member.name,
@@ -103,14 +108,27 @@ async def cancel_appointment_api(
 async def checkin_appointment_api(
     appointment_id: int,
     db: AsyncSession = Depends(get_db),
-    # 签到只有教练/前台/管理员能做；会员给自己签到也走不通（前端本来也不给这个按钮）
+    # 代签只有教练/前台/管理员能做。会员自助签到走
+    # POST /member_center/appointments/{id}/checkin —— 那边多一道上课时段的闸，
+    # 分开挂是为了不动这条代签路径的越权口径（非这三个角色一律 403）。
+    # 扣款两边一视同仁：状态落到「已签到」就按当前课时费从会员余额里出。
     user: User = Depends(require_roles("admin", "reception", "coach")),
 ):
-    appointment = await checkin_appointment(db, appointment_id)
+    appointment, charged, balance = await checkin_appointment(
+        db, appointment_id, operator=getattr(user, "name", None) or user.username
+    )
     await db.commit()
     return success_response(
-        msg="签到成功",
-        data={"appointment_id": appointment.id, "status": appointment.status},
+        msg=(
+            f"签到成功，已扣课时费 {charged:.2f} 元，余额 {balance:.2f} 元"
+            if charged else "签到成功"
+        ),
+        data={
+            "appointment_id": appointment.id,
+            "status": appointment.status,
+            "charged": charged,
+            "balance": balance,
+        },
     )
 
 

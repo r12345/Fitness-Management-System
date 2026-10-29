@@ -66,7 +66,12 @@
               <tr v-for="item in currentList" :key="item.id">
                 <td>{{ item.id }}</td>
                 <td>{{ item.member || '-' }}<span v-if="item.phone" style="color:#999;"> · {{ item.phone }}</span></td>
-                <td>{{ item.course }}</td>
+                <!-- 课时费就摆在课程旁边：签到是按这个价从会员余额里扣的，
+                     点之前要让操作的人看见要扣多少 -->
+                <td>
+                  {{ item.course }}
+                  <span v-if="item.course_price" style="color:#999;font-size:12px;"> · 课时费 ¥{{ item.course_price }}</span>
+                </td>
                 <td>{{ item.coach || '-' }}</td>
                 <td>{{ classTimeOf(item) }}</td>
                 <td>{{ item.schedule_location || '-' }}</td>
@@ -75,12 +80,15 @@
                 <td>{{ item.remark || '-' }}</td>
                 <td>
                   <div class="page-actions">
-                    <!-- 签到：未签到的预约（「待预约」是历史同义状态）可签到，教练/前台权限 -->
-                    <button v-if="canManage && isPending(item.status)" class="btn btn-primary btn-sm" type="button" @click="handleCheckin(item)">签到</button>
-                    <!-- 取消预约：未签到状态下会员/前台/管理员均可 -->
-                    <button v-if="(canManage || role === 'member') && isPending(item.status)" class="btn btn-danger btn-sm" type="button" @click="handleCancel(item)">取消预约</button>
-                    <!-- 冲突处理：管理员/前台 -->
-                    <button v-if="isAdminOrReception && isPending(item.status)" class="btn btn-secondary btn-sm" type="button" @click="openResolve(item)">冲突处理</button>
+                    <!-- 签到：前台/教练/管理员给未签到的预约签到；会员只能给自己签，
+                         且只在上课时段内（can_checkin 由后端按排课时间算好下发） -->
+                    <button v-if="showCheckin(item)" class="btn btn-primary btn-sm" type="button" @click="handleCheckin(item)">签到</button>
+                    <!-- 取消预约：未签到状态下会员/前台/管理员均可；会员侧还要课没上完 -->
+                    <button v-if="showCancel(item)" class="btn btn-danger btn-sm" type="button" @click="handleCancel(item)">取消预约</button>
+                    <!-- 冲突处理：只有「待预约」才出现。它是时段撞车留下的待办，
+                         其余状态都是已经定了的事，不该再挂一个「处理冲突」入口 -->
+                    <button v-if="isAdminOrReception && isConflictPending(item.status)" class="btn btn-secondary btn-sm" type="button" @click="openResolve(item)">冲突处理</button>
+                    <span v-if="!showCheckin(item) && !showCancel(item) && !(isAdminOrReception && isConflictPending(item.status))" style="color:#999;">-</span>
                   </div>
                 </td>
               </tr>
@@ -106,11 +114,14 @@
           <button class="btn btn-secondary btn-sm" type="button" @click="showResolve = false">关闭</button>
         </div>
         <div class="modal-body">
+          <p class="field-hint" style="margin-bottom:10px;">
+            该会员在这个时段已有其他预约。保留则转为「已预约」并占用课程名额，取消则不占名额。
+          </p>
           <div class="field">
             <label>状态</label>
             <select v-model="resolveForm.status">
-              <option value="已预约">已预约</option>
-              <option value="已取消">已取消</option>
+              <option value="已预约">已预约（保留这一单）</option>
+              <option value="已取消">已取消（退掉这一单）</option>
             </select>
           </div>
           <div class="field">
@@ -178,8 +189,9 @@ import {
 } from "../api/appointments.js";
 import {useUserStore} from "../stores/user.js";
 import {getMemberList} from "../api/member.js";
+import {checkinMyAppointment} from "../api/member-center.js";
 import {list_courses} from "../api/courses.js";
-import {isPendingStatus, statusClass, scheduleStatusClass} from "../utils/appointmentStatus.js";
+import {isConflictPending, isUnchecked, canCheckin, canCancel, BOOKED, statusClass, scheduleStatusClass} from "../utils/appointmentStatus.js";
 
 const useStore = useUserStore();
 const toast = useToast();
@@ -190,8 +202,21 @@ const role = computed(() => useStore.role);
 const canManage = computed(() => ["admin", "reception", "coach"].includes(role.value));
 const isAdminOrReception = computed(() => role.value === "admin" || role.value === "reception");
 
-/** 「待预约」是「已预约」的历史同义写法，两种都算未签到 */
-const isPending = isPendingStatus;
+/**
+ * 行内按钮的显示条件，前台/教练/管理员和会员两套口径：
+ *
+ *  · 工作人员是管理动作 —— 只要是正常「已预约」就给按钮，不受上课时段限制
+ *    （补签、纠错都要能操作）；但「待预约」不行 —— 它连名额都没占，
+ *    得先在处理冲突里定下来；
+ *  · 会员是自助动作 —— 签到只能在上课时段内（can_checkin），
+ *    取消只能在这节课还没上完、也没签过到的时候（can_cancel）。
+ *    两个标记都由后端按排课时间算好下发，前端不再自己判一遍。
+ */
+const showCheckin = (item) =>
+  canManage.value ? item.status === BOOKED : canCheckin(item);
+
+const showCancel = (item) =>
+  canManage.value ? isUnchecked(item.status) : canCancel(item);
 
 const activeTab = ref("all");
 const showResolve = ref(false);
@@ -321,11 +346,16 @@ async function resetSearch() {
   await loadData();
 }
 
-// 签到
+// 签到。会员走 /member_center 的自助签到（多一道上课时段的闸），
+// 其余角色走 /appointments 的代签入口 —— 两条路径的越权口径不一样，
+// 但扣款一致：状态一落到「已签到」就按课程当前课时费从会员余额里出。
 async function handleCheckin(item) {
   try {
-    await checkin_appointment(item.id);
-    toast.show("签到成功");
+    const res = role.value === "member"
+      ? await checkinMyAppointment(item.id)
+      : await checkin_appointment(item.id);
+    // 签到即扣款（代签也一样），把扣了多少、还剩多少直接说清楚
+    toast.show(res.data?.charged ? `签到成功，已扣课时费 ${res.data.charged} 元，余额 ${res.data.balance} 元` : "签到成功");
     await loadData();
   } catch (err) {
     toast.show(err.friendlyMessage || "签到失败", "error");
@@ -356,10 +386,11 @@ async function handleCancel(item) {
   }
 }
 
-// 打开冲突处理弹窗
+// 打开冲突处理弹窗。目标状态默认给「已预约」（保留这一单），
+// 不回填 item.status —— 它此刻是「待预约」，不是合法的目标状态。
 function openResolve(item) {
   selectedAppointment.value = item;
-  resolveForm.value.status = item.status;
+  resolveForm.value.status = "已预约";
   resolveForm.value.remark = item.remark || "";
   showResolve.value = true;
 }

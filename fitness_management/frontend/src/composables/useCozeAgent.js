@@ -43,24 +43,27 @@
  *   本文件负责取用与过期刷新；后端没配置时自动退回 PAT，功能可用但不隔离。
  */
 
+import { ref } from "vue";
 import { get_agent_token } from "../api/agent";
 
 /** 智能体 ID：扣子开发页 URL 里 `bot` 参数后的数字。这里取自你给的店铺页地址。 */
 export const COZE_BOT_ID = "7687570944927531048";
 
 /**
- * 个人访问令牌（PAT）。
+ * 个人访问令牌（PAT）—— 降级用的公共令牌。
  *
- * ⚠️ 写在前端就等于公开：任何人打开 DevTools → Network 都能看到它，
- * 拿到后能调用你账号下有权限的全部扣子接口。
- * 这是扣子官方「安装代码」的默认做法（它自己生成的代码就是把 token 明文贴进页面），
- * 自己用的演示项目没问题；**要对外发布必须改成后端代理换 token**，别让令牌出到浏览器。
+ * ⚠️ **绝不写死在源码里**：写在前端就等于公开（DevTools → Network 就能看到），
+ *   拿到后能调用你账号下有权限的全部扣子接口；一旦提交进仓库，历史里都会留着，
+ *   清理起来非常麻烦。
+ *   所以改成从构建期环境变量读取：项目根目录 `.env` 里写 `VITE_COZE_PAT=pat_xxx`，
+ *   `.env` 已被 `.gitignore` 忽略，不会进仓库（vite.config.js 里把 envDir 指到了项目根）。
+ *   没配置时该值为空，AI 助手直接给出「未配置令牌」的提示，不会带着空 token 去撞接口。
  *
  * ⚠️ 另外它还是**会话不隔离的根因**：扣子用它来认人，所有人共用一个 PAT
  *   就等于共用一份对话记录。所以下面优先走后端签发的专属令牌，
  *   只有当后端没配置 OAuth 时才退回到它。
  */
-const COZE_PAT = "pat_JXDYiq9gB81gAjFECJm5KMjvfCjoiEo7VykcCSeOdZOuXUcYCV3ElkD0YO6VEP9u";
+const COZE_PAT = import.meta.env.VITE_COZE_PAT || "";
 
 /** 中文包。SDK 有 cn 与非 cn 两套，业务是中文就用 cn，否则内置文案是英文。 */
 const SDK_URL =
@@ -79,6 +82,17 @@ let client = null;
 let authCache = { token: "", expiresAt: 0, isolated: false };
 /** 令牌获取的并发保护：预取和点击可能同时进来，别打两次接口 */
 let authPromise = null;
+
+/**
+ * 当前这次会话的隔离状态，给界面显示用（响应式）。
+ *   unknown  = 还没取过令牌（刚进页面，还没悬停/点击）
+ *   isolated = 拿到了用户专属令牌，一人一份会话
+ *   shared   = 后端没配 OAuth，退回了公共 PAT，所有人共用一份会话
+ *
+ * 为什么要把这个状态亮出来：降级是**静默**发生的，不显示的话使用者会以为
+ * 隔离是好的，直到看见别人的聊天记录才发现不对。
+ */
+const authMode = ref("unknown");
 
 /**
  * 取这次要用的扣子令牌。
@@ -106,6 +120,7 @@ async function resolveAuthToken(force = false) {
           expiresAt: Date.now() + Number(data.expires_in || 900) * 1000,
           isolated: true
         };
+        authMode.value = "isolated";
         return authCache.token;
       }
       // 后端在，只是没配 OAuth：这是可预期的降级，用 info 而不是报错
@@ -117,12 +132,17 @@ async function resolveAuthToken(force = false) {
       // 未登录 / 后端没起 / 网络异常，同样降级，不该因此让助手打不开
       console.warn("[AI助手] 获取专属令牌失败，回退公共令牌：", (err && err.message) || err);
     }
+    // 没配 OAuth 也没配 PAT：给个明确提示，别拿空 token 去初始化
+    if (!COZE_PAT) {
+      throw new Error("AI 助手未配置令牌：请在后端配置扣子 OAuth，或在 .env 里设置 VITE_COZE_PAT");
+    }
     authCache = {
       token: COZE_PAT,
       // 公共令牌没有有效期概念，给个 10 分钟缓存，好在换了配置后能自动重试
       expiresAt: Date.now() + 600000,
       isolated: false
     };
+    authMode.value = "shared";
     return COZE_PAT;
   })();
 
@@ -269,6 +289,7 @@ export function useCozeAgent() {
     // 令牌是按用户签的，也必须一起作废，否则新用户会用到旧用户的令牌
     authCache = { token: "", expiresAt: 0, isolated: false };
     authPromise = null;
+    authMode.value = "unknown";
   }
 
   return {
@@ -278,6 +299,7 @@ export function useCozeAgent() {
     isAgentReady,
     isAgentIsolated,
     destroyAgent,
+    authMode,
     agentName: AGENT_NAME,
     agentDesc: AGENT_DESC,
     agentId: COZE_BOT_ID

@@ -625,6 +625,8 @@ async def list_upcoming_schedules(
             Coach.name.label("coach_name"),
             # 课程时长：前端改时间后按「结束 = 开始 + 时长」自动带出结束时间时用
             Course.duration.label("duration"),
+            # 课时费：会员在「可预约课程」里要先看见这节课多少钱
+            Course.price.label("price"),
             Schedule.schedule_date,
             Schedule.start_time,
             Schedule.end_time,

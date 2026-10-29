@@ -33,6 +33,8 @@ import time
 import urllib.error
 import urllib.request
 
+from typing import Optional
+
 from jose import jwt
 
 from .config import settings
@@ -51,9 +53,26 @@ class CozeError(RuntimeError):
     """扣子侧调用失败，或本地凭据没配好。"""
 
 
+def _private_key_path() -> Optional[pathlib.Path]:
+    """私钥文件路径。相对路径按项目根目录解释，避免受启动时工作目录影响。"""
+    path = pathlib.Path(settings.COZE_OAUTH_PRIVATE_KEY_PATH)
+    if not path.is_absolute():
+        path = pathlib.Path(__file__).resolve().parents[2] / path
+    return path
+
+
 def is_configured() -> bool:
-    """OAuth 三件套是否齐了。缺任意一项就只能退回 PAT（= 会话不隔离）。"""
-    has_key = bool(settings.COZE_OAUTH_PRIVATE_KEY) or bool(settings.COZE_OAUTH_PRIVATE_KEY_PATH)
+    """OAuth 三件套是否齐了。缺任意一项就只能退回 PAT（= 会话不隔离）。
+
+    路径填了但文件不存在也算没配 —— 否则会走到「配置齐全」分支，
+    直到签 JWT 时才炸在「读不到私钥」，排查起来绕一圈。
+    """
+    if settings.COZE_OAUTH_PRIVATE_KEY:
+        has_key = True
+    elif settings.COZE_OAUTH_PRIVATE_KEY_PATH:
+        has_key = _private_key_path().is_file()
+    else:
+        has_key = False
     return bool(settings.COZE_OAUTH_APP_ID and settings.COZE_OAUTH_KID and has_key)
 
 
@@ -64,26 +83,36 @@ def describe_missing() -> str:
         missing.append("COZE_OAUTH_APP_ID")
     if not settings.COZE_OAUTH_KID:
         missing.append("COZE_OAUTH_KID")
-    if not (settings.COZE_OAUTH_PRIVATE_KEY or settings.COZE_OAUTH_PRIVATE_KEY_PATH):
-        missing.append("COZE_OAUTH_PRIVATE_KEY_PATH")
+    if not settings.COZE_OAUTH_PRIVATE_KEY:
+        path = _private_key_path()
+        if not settings.COZE_OAUTH_PRIVATE_KEY_PATH:
+            missing.append("COZE_OAUTH_PRIVATE_KEY_PATH")
+        elif not path.is_file():
+            missing.append(f"私钥文件不存在：{path}")
     if not missing:
         return ""
     return "未配置扣子 OAuth 凭据：" + "、".join(missing)
 
 
-def session_name_for(user_id: int) -> str:
-    """业务侧用户标识。同一个用户永远得到同一个 session_name，才能延续自己的会话。"""
-    return f"{settings.COZE_SESSION_PREFIX}{user_id}"
+def session_name_for(user_id: int, role: Optional[str] = None) -> str:
+    """业务侧用户标识 → 扣子的 session_name。
+
+    同一个用户必须**永远得到同一个字符串**，否则扣子每次都当他是个新访客，
+    历史会话就断了。这里用「角色 + 用户 ID」拼：`gym-admin-3`、`gym-member-12`。
+
+    带上角色有两个用处：一是日志/排障时一眼看出是谁，二是万一将来
+    会员表和员工表的 ID 撞号（member.id 与 sys_user.id 是两套自增），
+    也不会把两个人并成同一个人。
+    """
+    identity = f"{role}-{user_id}" if role else str(user_id)
+    return f"{settings.COZE_SESSION_PREFIX}{identity}"
 
 
 def _load_private_key() -> str:
     if settings.COZE_OAUTH_PRIVATE_KEY:
         return settings.COZE_OAUTH_PRIVATE_KEY.strip()
 
-    path = pathlib.Path(settings.COZE_OAUTH_PRIVATE_KEY_PATH)
-    if not path.is_absolute():
-        # 相对路径按项目根目录解释，避免受启动时工作目录影响
-        path = pathlib.Path(__file__).resolve().parents[2] / path
+    path = _private_key_path()
     try:
         return path.read_text(encoding="utf-8").strip()
     except OSError as exc:

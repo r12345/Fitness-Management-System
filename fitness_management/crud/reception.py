@@ -1,26 +1,28 @@
 """前台运营工作台相关数据库操作。"""
-from datetime import datetime
+from datetime import date, datetime, time, timedelta
 from fastapi import HTTPException
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from fitness_management.crud.user import open_login_account
-from fitness_management.models import Member, Appointment, ConsumeRecord, Equipment, Reception, User
+from fitness_management.models import (
+    Member, Appointment, ConsumeRecord, Course, Equipment, Repair, Reception, User,
+)
 from fitness_management.schemas.reception import ReceptionCreate
-from fitness_management.utils.status import PENDING_STATUSES
+from fitness_management.utils.status import UNRESOLVED_STATUSES, PENDING, CHECKED_IN, FINISHED, CANCELED
 
 
 async def get_sum(db: AsyncSession):
     # 今日零点
-    today_start = datetime(datetime.now().year, datetime.now().month, datetime.now().day)
+    today_start = datetime.combine(date.today(), time.min)
 
     # 1. 今日新增会员
     q1 = select(func.count(Member.id)).where(Member.card_start >= today_start)
     today_new_members = (await db.execute(q1)).scalar_one() or 0
 
-    # 2. 待处理预约：还没签到的预约（历史数据写作「待预约」，新建的写作「已预约」）
-    q2 = select(func.count(Appointment.id)).where(Appointment.status.in_(PENDING_STATUSES))
+    # 2. 待处理预约：还没结课的预约。「待预约」= 时段冲突等前台处理，同样算待办
+    q2 = select(func.count(Appointment.id)).where(Appointment.status.in_(UNRESOLVED_STATUSES))
     pending_appointments = (await db.execute(q2)).scalar_one() or 0
 
     # 3. 待报修器材：看器材当前状态，而不是报修流水条数。
@@ -41,29 +43,125 @@ async def get_sum(db: AsyncSession):
 
 
 async def get_re_business_log(db: AsyncSession):
-    # 查询消费记录，预加载会员，按创建时间倒序（最新在最上面）
-    today_start = datetime(datetime.now().year, datetime.now().month, datetime.now().day)
-    query = (
-        select(ConsumeRecord)
-        .options(joinedload(ConsumeRecord.member))
-        .where(ConsumeRecord.created_at.between(today_start, datetime.now()))
-    )
-    result = await db.execute(query)
-    record_list = result.scalars().all()
+    """今日业务动态：把今天馆里发生的事按时间倒序排成一条流水。
 
-    items = []
-    for rec in record_list:
-        member_name = rec.member.name if rec.member else ""
-        # 只保留时分：10:24
-        time_str = rec.created_at.strftime("%H:%M")
-        items.append({
-            "time": time_str or '0:00',
-            "pay_method": rec.pay_method or '未支付',
-            "target": member_name or '***',
-            "content": f"{rec.item or '****'}，金额 {rec.amount or ''} 元",
-            "operator": rec.operator or '***'
+    原来只查 consumption_record —— 今天没人消费，整块面板就是一片空白，
+    看着像是功能坏了。可「业务动态」要回答的是「今天发生了什么」：
+    有人开卡、有人约课、有人来上课签到、有人消费、有器材报修，这些都是动态。
+    所以这里按来源分别取今天的数据，再合成一条时间线。
+
+    各来源能拿到的时间精度不一样：消费有 created_at（精确到秒），预约有
+    appointment_time，开卡只有 card_start 这个日期 —— 拿不到时分的
+    时间列显示「—」，排序时归到当天起点，不会带着一个假时间混进流水里。
+    """
+    today = date.today()
+    day_start = datetime.combine(today, time.min)
+    day_end = day_start + timedelta(days=1)
+
+    events: list[dict] = []
+
+    # 1. 今日开卡：card_start 是日期，没有时分
+    new_members = (
+        await db.execute(
+            select(Member.name, Member.card_type, Member.phone)
+            .where(Member.card_start == today)
+        )
+    ).all()
+    for name, card_type, _phone in new_members:
+        events.append({
+            "_sort": day_start,
+            "time": "—",
+            "operator": "前台",
+            "target": name or "—",
+            "content": f"办理{card_type or '会员卡'}开卡",
+            "pay_method": "—",
         })
-    return {"items": items}
+
+    # 2. 今日的预约与上课签到：同一条预约，签没签到说的是两件事
+    appt_rows = (
+        await db.execute(
+            select(
+                Appointment.appointment_time,
+                Appointment.status,
+                Member.name.label("member_name"),
+                Course.name.label("course_name"),
+            )
+            .join(Member, Member.id == Appointment.member_id)
+            .join(Course, Course.id == Appointment.course_id)
+            .where(
+                Appointment.appointment_time >= day_start,
+                Appointment.appointment_time < day_end,
+            )
+        )
+    ).all()
+    for at, status, member_name, course_name in appt_rows:
+        if status == CHECKED_IN or status == FINISHED:
+            content = f"{course_name} 已签到上课"
+            operator = "系统"
+        elif status == CANCELED:
+            content = f"{course_name} 预约已取消"
+            operator = member_name or "—"
+        elif status == PENDING:
+            content = f"预约 {course_name}（时段冲突，待前台处理）"
+            operator = member_name or "—"
+        else:
+            content = f"预约 {course_name}"
+            operator = member_name or "—"
+        events.append({
+            "_sort": at or day_start,
+            "time": at.strftime("%H:%M") if at else "—",
+            "operator": operator,
+            "target": member_name or "—",
+            "content": content,
+            "pay_method": "—",
+        })
+
+    # 3. 今日消费
+    record_list = (
+        await db.execute(
+            select(ConsumeRecord)
+            .options(joinedload(ConsumeRecord.member))
+            .where(
+                ConsumeRecord.created_at >= day_start,
+                ConsumeRecord.created_at < day_end,
+            )
+        )
+    ).scalars().all()
+    for rec in record_list:
+        events.append({
+            "_sort": rec.created_at or day_start,
+            "time": rec.created_at.strftime("%H:%M") if rec.created_at else "—",
+            "operator": rec.operator or "—",
+            "target": rec.member.name if rec.member else "—",
+            "content": f"{rec.item or '消费'}，金额 {rec.amount if rec.amount is not None else ''} 元",
+            "pay_method": rec.pay_method or "—",
+        })
+
+    # 4. 今日报修
+    repair_rows = (
+        await db.execute(
+            select(Repair.repair_time, Repair.description, Equipment.name)
+            .join(Equipment, Equipment.id == Repair.equipment_id)
+            .where(
+                Repair.repair_time >= day_start,
+                Repair.repair_time < day_end,
+            )
+        )
+    ).all()
+    for rt, description, equipment_name in repair_rows:
+        events.append({
+            "_sort": rt or day_start,
+            "time": rt.strftime("%H:%M") if rt else "—",
+            "operator": "系统",
+            "target": equipment_name or "—",
+            "content": f"器材报修：{description or '—'}",
+            "pay_method": "—",
+        })
+
+    events.sort(key=lambda e: e["_sort"], reverse=True)
+    for e in events:
+        e.pop("_sort", None)
+    return {"items": events}
 
 
 # 运营（前台）人员：管理员维护，列表 + 新增 + 删除。

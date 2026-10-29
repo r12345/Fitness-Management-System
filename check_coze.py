@@ -12,6 +12,7 @@
 """
 import asyncio
 import os
+import pathlib
 import sys
 
 # Settings 的 env_file 是相对路径 ".env"，必须站在项目根目录才读得到。
@@ -68,6 +69,13 @@ def main() -> int:
         "环境变量内联" if settings.COZE_OAUTH_PRIVATE_KEY
         else (settings.COZE_OAUTH_PRIVATE_KEY_PATH or "(空)")
     )
+    if (
+        not settings.COZE_OAUTH_PRIVATE_KEY
+        and settings.COZE_OAUTH_PRIVATE_KEY_PATH
+        and not pathlib.Path(settings.COZE_OAUTH_PRIVATE_KEY_PATH).is_absolute()
+        and not (pathlib.Path(ROOT) / settings.COZE_OAUTH_PRIVATE_KEY_PATH).is_file()
+    ):
+        key_src += f"（文件不存在，应放在 {pathlib.Path(ROOT) / settings.COZE_OAUTH_PRIVATE_KEY_PATH}）"
     line(WAIT, f"私钥来源     : {key_src}")
     line(WAIT, f"换取地址     : {settings.COZE_TOKEN_URL}")
     print()
@@ -76,33 +84,36 @@ def main() -> int:
         line(BAD, "配置不完整，会话隔离当前是关闭的（前端会退回公共 PAT）")
         print(f"      {describe_missing()}")
         print()
-        print("  补齐办法：复制 .env.example 为 .env，按里面的注释把")
-        print("  COZE_OAUTH_APP_ID / COZE_OAUTH_KID / COZE_OAUTH_PRIVATE_KEY_PATH 填上。")
+        print("  补齐办法：打开项目根目录的 .env（没有就从 .env.example 复制一份），")
+        print("  把 COZE_OAUTH_APP_ID / COZE_OAUTH_KID 填上，")
+        print("  再把控制台下载的 private_key.pem 放到 COZE_OAUTH_PRIVATE_KEY_PATH 指定的位置。")
         return 1
 
     line(OK, "三项配置齐全")
 
     # 第 1 步：能不能签出 JWT。私钥格式不对会在这里就炸。
     try:
-        jwt_token = sign_jwt(session_name_for(1))
+        jwt_token = sign_jwt(session_name_for(1, "admin"))
         line(OK, f"JWT 签发成功（{len(jwt_token)} 字符，RS256）")
     except CozeError as exc:
         line(BAD, "JWT 签发失败")
         print(f"      {explain(exc)}")
         return 1
 
-    # 第 2、3 步：分别以两个不同用户身份换令牌，比对是否真的隔离。
+    # 第 2、3 步：分别以两个不同身份换令牌，比对是否真的隔离。
+    # 两个账号、两种角色都测一遍 —— 隔离是按「角色 + 用户 ID」做的。
+    identities = [(1, "admin"), (2, "member")]
     tokens = {}
-    for uid in (1, 2):
-        session_name = session_name_for(uid)
+    for uid, role in identities:
+        session_name = session_name_for(uid, role)
         try:
             token, expires_in = asyncio.run(issue_access_token(session_name))
         except CozeError as exc:
             line(BAD, f"用户 {uid}（{session_name}）换取令牌失败")
             print(f"      {explain(exc)}")
             return 1
-        tokens[uid] = token
-        line(OK, f"用户 {uid}（{session_name}）拿到令牌："
+        tokens[session_name] = token
+        line(OK, f"身份 {session_name} 拿到令牌："
                  f"{token[:12]}... 有效期 {expires_in}s")
 
     print()

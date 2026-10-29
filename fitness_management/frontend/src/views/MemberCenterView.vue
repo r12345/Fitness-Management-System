@@ -7,44 +7,28 @@
     <div class="page-header">
       <div>
         <h1>会员个人中心</h1>
-        <p class="page-desc">查看预约、课程、训练记录、打卡和个人信息。</p>
+        <p class="page-desc">查看我的课程、预约上课、训练记录、打卡和个人信息。</p>
       </div>
     </div>
 
-    <div class="split-layout" style="margin-bottom: 20px;">
-      <div class="panel">
-        <div class="panel-body">
-          <div class="page-actions">
-            <span class="user-avatar" style="width: 56px; height: 56px; font-size: 22px;">{{ profile.name }}</span>
-            <div>
-              <!-- 原来这里写死了 789，副标题也写死「会员编号 M1001 · 年卡」，
-                   跟登录的会员没有半点关系 -->
-              <h2 style="margin: 0;">{{ profile.name || '-' }}</h2>
-              <div class="page-desc">会员编号 M{{ profile_info.id ?? '-' }} · {{ profile_info.card_type || '-' }}</div>
-            </div>
-          </div>
-        </div>
-        <div class="panel-body" style="border-top: 1px solid var(--border);">
-          <div class="stat-grid" style="grid-template-columns: 1fr; margin-bottom: 0;">
-            <div class="stat-card"><div><div class="stat-card-value">{{ profile_info.card_expire}}</div><div class="stat-card-label">到期时间</div></div></div>
-            <div class="stat-card"><div><div class="stat-card-value">{{ profile_info.balance }}</div><div class="stat-card-label">账户余额</div></div></div>
+    <div class="panel" style="margin-bottom: 20px;">
+      <div class="panel-body">
+        <div class="page-actions">
+          <span class="user-avatar" style="width: 56px; height: 56px; font-size: 22px;">{{ profile.name }}</span>
+          <div>
+            <h2 style="margin: 0;">{{ profile.name || '-' }}</h2>
+            <div class="page-desc">会员编号 M{{ profile_info.id ?? '-' }} · {{ profile_info.card_type || '-' }}</div>
           </div>
         </div>
       </div>
-
-      <div class="panel">
-        <div class="panel-header">
-          <h2 class="panel-title">近期安排</h2>
-        </div>
-        <div class="panel-body">
-          <div v-for="item in myCourses" :key="item.id" class="course-card" style="margin-bottom: 12px;">
-            <div class="course-card-top">
-              <h3>{{ item.course.name }}</h3>
-              <span class="badge" :class="item.tone">{{ item.status }}</span>
-            </div>
-            <div class="course-card-meta">
-              <span>{{ formatTime(item.course.start_time) }}</span>
-              <span v-if="item.schedule && item.schedule.location"> · {{ item.schedule.location }}</span>
+      <div class="panel-body" style="border-top: 1px solid var(--border);">
+        <div class="stat-grid" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 0;">
+          <div class="stat-card"><div><div class="stat-card-value">{{ profile_info.card_expire || '-' }}</div><div class="stat-card-label">到期时间</div></div></div>
+          <div class="stat-card"><div><div class="stat-card-value">{{ profile_info.balance ?? '-' }}</div><div class="stat-card-label">账户余额（元）</div></div></div>
+          <div class="stat-card">
+            <div>
+              <div class="stat-card-value" style="font-size:18px;">{{ nextClass ? nextClassText : '暂无' }}</div>
+              <div class="stat-card-label">下一节课</div>
             </div>
           </div>
         </div>
@@ -65,36 +49,54 @@
         </button>
       </div>
 
-      <div v-if="activeTab === 'appointments'" class="panel-body no-padding">
+      <!-- ===== 我的课程：把「我的预约」和「我的课程」合成一张表 =====
+           原来这两个 tab 查的是同一批数据（一个查全部预约、一个只查已签到的），
+           会员要在两处来回翻才能拼出「我报了什么课、上没上、还能不能退」。
+           现在只留一张表，用上面的小筛选切「待上课 / 已上过 / 已取消」。 -->
+      <div v-if="activeTab === 'courses'" class="panel-body no-padding">
+        <div class="tabs" style="padding: 12px 16px 0;">
+          <button
+            v-for="f in courseFilters"
+            :key="f.key"
+            class="tab-btn"
+            :class="{ active: courseFilter === f.key }"
+            type="button"
+            @click="courseFilter = f.key"
+          >{{ f.label }}（{{ filterCount(f.key) }}）</button>
+        </div>
         <div class="data-table-wrap">
           <table class="data-table">
-            <thead><tr><th>课程</th><th>上课时间</th><th>教练</th><th>地点</th><th>排课状态</th><th>预约状态</th><th>操作</th></tr></thead>
+            <thead>
+              <tr>
+                <th>课程</th><th>教练</th><th>上课时间</th><th>地点</th>
+                <th>课时费</th><th>排课状态</th><th>预约状态</th><th>操作</th>
+              </tr>
+            </thead>
             <tbody>
-              <tr v-for="(item, index) in appointments" :key="index">
+              <tr v-if="!filteredAppointments.length">
+                <td colspan="8" style="text-align:center;color:#999;">暂无课程记录</td>
+              </tr>
+              <tr v-for="item in filteredAppointments" :key="item.id">
                 <td>{{ courseNameOf(item) }}</td>
-                <td>{{ classTimeOf(item) }}</td>
                 <td>{{ coachNameOf(item) }}</td>
+                <td>{{ classTimeOf(item) }}</td>
                 <td>{{ item.schedule_location || '-' }}</td>
+                <td>{{ priceOf(item) }}</td>
                 <td><span class="badge" :class="scheduleStatusClass(item.schedule_status)">{{ item.schedule_status || '—' }}</span></td>
                 <td><span class="badge" :class="statusClass(item.status)">{{ item.status }}</span></td>
-                <!-- 「待预约」是「已预约」的历史同义写法，只判断「已预约」会让老数据没有取消入口 -->
-                <td><button v-if="isPendingStatus(item.status)" class="btn btn-danger btn-sm" type="button" @click="cancel(item)">取消预约</button></td>
+                <td>
+                  <!-- 签到 / 取消能不能点由后端按上课时段与排课状态算好下发
+                       （can_checkin / can_cancel）：课没开始只能取消，正在上才能签到，
+                       排课已结束或已签到就什么都不能做 -->
+                  <div class="page-actions">
+                    <button v-if="canCheckin(item)" class="btn btn-primary btn-sm" type="button" @click="checkin(item)">签到</button>
+                    <button v-if="canCancel(item)" class="btn btn-danger btn-sm" type="button" @click="cancel(item)">取消预约</button>
+                    <span v-if="!canCheckin(item) && !canCancel(item)" style="color:#999;">-</span>
+                  </div>
+                </td>
               </tr>
             </tbody>
           </table>
-        </div>
-      </div>
-
-      <div v-else-if="activeTab === 'courses'" class="panel-body">
-        <div class="course-cards">
-          <div v-for="item in myCourses" :key="item.name" class="course-card">
-            <div class="course-card-top"><h3>{{ item.course.name }}</h3><span class="badge info">{{ item.course.coach.name }}</span></div>
-            <div class="course-card-meta">
-              <span>{{ formatTime(item.course.start_time) }}</span>
-              <!-- 上课地点随教练排课走：排课被教练改过地点，这里显示的就是最新那间教室 -->
-              <span v-if="item.schedule && item.schedule.location"> · {{ item.schedule.location }}</span>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -102,10 +104,10 @@
         <!-- 会员可预约的排课：全部教练、当前时间起往后 4 周 -->
         <div class="data-table-wrap">
           <table class="data-table">
-            <thead><tr><th>上课日期</th><th>星期</th><th>时间段</th><th>课程</th><th>教练</th><th>地点</th><th>已约/容量</th><th>状态</th><th>操作</th></tr></thead>
+            <thead><tr><th>上课日期</th><th>星期</th><th>时间段</th><th>课程</th><th>教练</th><th>地点</th><th>课时费</th><th>已约/容量</th><th>状态</th><th>操作</th></tr></thead>
             <tbody>
               <tr v-if="!upcomingSchedules.length">
-                <td colspan="9" style="text-align:center;color:#999;">暂无可预约的排课</td>
+                <td colspan="10" style="text-align:center;color:#999;">暂无可预约的排课</td>
               </tr>
               <tr v-for="item in upcomingSchedules" :key="item.schedule_id">
                 <td>{{ item.schedule_date }}</td>
@@ -114,6 +116,7 @@
                 <td>{{ item.course_name }}</td>
                 <td>{{ item.coach_name || '-' }}</td>
                 <td>{{ item.location || '-' }}</td>
+                <td>{{ priceOf(item) }}</td>
                 <td>{{ item.booked_count || 0 }}<template v-if="capacityOf(item)"> / {{ capacityOf(item) }}</template></td>
                 <td><span class="badge" :class="scheduleStatusClass(item.status)">{{ item.status }}</span></td>
                 <td>
@@ -176,6 +179,9 @@
               <tr><th>日期</th><th>训练内容</th><th>重量</th><th>时长</th><th>体脂率</th></tr>
             </thead>
             <tbody>
+              <tr v-if="!trainRecords.length">
+                <td colspan="5" style="text-align:center;color:#999;">暂无训练记录</td>
+              </tr>
               <tr v-for="(item, index) in trainRecords" :key="index">
                 <td>{{ item.train_date }}</td>
                 <td>{{ item.content }}</td>
@@ -200,6 +206,9 @@
           <table class="data-table">
             <thead><tr><th>打卡日期</th><th>到店时间</th><th>离开时间</th><th>训练时长</th></tr></thead>
             <tbody>
+            <tr v-if="!checkins.length">
+              <td colspan="4" style="text-align:center;color:#999;">暂无打卡记录</td>
+            </tr>
             <tr v-for="(item, index) in checkins" :key="index">
               <td>{{ item.checkin_date }}</td>
               <td>{{ item.checkin_time }}</td>
@@ -267,12 +276,15 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref,onMounted } from "vue";
+import { computed, reactive, ref, onMounted } from "vue";
 import { useToast } from "../composables/useToast";
 import { confirmDialog } from "../composables/useConfirm.js";
-import {getMyAppointments, getMyCourses, editProfile, get_member_info, getUpcomingSchedules} from "../api/member-center.js"
+import {getMyAppointments, editProfile, get_member_info, getUpcomingSchedules, checkinMyAppointment} from "../api/member-center.js"
 import {cancel_appointment, create_appointment} from "../api/appointments.js"
-import {isPendingStatus, statusClass, scheduleStatusClass} from "../utils/appointmentStatus.js";
+import {
+  canCheckin, canCancel, isUnchecked, statusClass, scheduleStatusClass,
+  CHECKED_IN, FINISHED, CANCELED,
+} from "../utils/appointmentStatus.js";
 import TrendChart from "../components/TrendChart.vue";
 
 import {
@@ -289,21 +301,27 @@ import {useCheckinStore} from '../stores/checkin.js'
 const userStore = useUserStore()
 const checkinStore = useCheckinStore()
 const toast = useToast();
-const activeTab = ref("appointments");
+
+/** 「我的预约」和「我的课程」原本是两个 tab，查的是同一批数据，合成一个 */
+const activeTab = ref("courses");
 const tabs = [
-  { key: "appointments", label: "我的预约" },
-  { key: "booking", label: "可预约课程" },
   { key: "courses", label: "我的课程" },
+  { key: "booking", label: "可预约课程" },
   { key: "training", label: "训练记录" },
   { key: "checkin", label: "我的打卡" },
   { key: "profile", label: "个人信息" }
 ];
-const upcoming = [
-  { name: "哈他瑜伽", tag: "即将开始", tone: "warn", meta: "今天 19:30 - 20:30 · 刘洋" },
-  { name: "一对一塑形", tag: "已预约", tone: "info", meta: "08月29日 15:00 · 张昊" }
+
+/** 我的课程里的小筛选：不再靠两个 tab 分开看 */
+const courseFilter = ref("upcoming");
+const courseFilters = [
+  { key: "upcoming", label: "待上课" },
+  { key: "attended", label: "已上过" },
+  { key: "canceled", label: "已取消" },
+  { key: "all", label: "全部" },
 ];
+
 const appointments = ref([]);
-const myCourses = ref([])
 const checkins = ref([]);
 const profile = reactive({
   name: null,
@@ -319,8 +337,6 @@ const profile_info = ref({
   card_expire: null,
   balance: null
 })
-
-// 删掉旧的无效computed
 
 const trainRecords = ref([]);
 
@@ -380,6 +396,55 @@ function classTimeOf(item) {
   if (item.appointment_time) return formatTime(item.appointment_time)
   return item.course?.start_time ? formatTime(item.course.start_time) : '-'
 }
+
+/** 课时费：签到时就是按这个数从余额里扣，会员下单前先看见 */
+function priceOf(item) {
+  if (!item) return '-'
+  const price = item.course_price ?? item.price ?? item.course?.price
+  return price === null || price === undefined ? '-' : `${price} 元`
+}
+
+/** 我的课程的小筛选：状态值取自 utils，不在这里另写一份字面量 */
+function matchFilter(item, key) {
+  const status = item?.status
+  if (key === 'all') return true
+  if (key === 'upcoming') return isUnchecked(status)
+  if (key === 'attended') return status === CHECKED_IN || status === FINISHED
+  if (key === 'canceled') return status === CANCELED
+  return true
+}
+
+const filteredAppointments = computed(() =>
+  appointments.value.filter((item) => matchFilter(item, courseFilter.value))
+)
+
+function filterCount(key) {
+  return appointments.value.filter((item) => matchFilter(item, key)).length
+}
+
+/** 下一节课：还没上、且时间没过的那节里最早的一节 */
+const nextClass = computed(() => {
+  const now = Date.now()
+  return appointments.value
+    .filter((item) => {
+      if (!isUnchecked(item.status)) return false
+      const t = item.schedule_date
+        ? new Date(`${item.schedule_date} ${item.schedule_start ?? '00:00'}`.trim())
+        : new Date(item.appointment_time)
+      return !Number.isNaN(t.getTime()) && t.getTime() >= now
+    })
+    .sort((a, b) => {
+      const ta = new Date(a.schedule_date ? `${a.schedule_date} ${a.schedule_start ?? ''}` : a.appointment_time)
+      const tb = new Date(b.schedule_date ? `${b.schedule_date} ${b.schedule_start ?? ''}` : b.appointment_time)
+      return ta - tb
+    })[0] || null
+})
+
+const nextClassText = computed(() => {
+  if (!nextClass.value) return ''
+  const item = nextClass.value
+  return `${courseNameOf(item)} ${classTimeOf(item)}`
+})
 
 // ✅ 切换周期调用这个函数，把queryPeriod传给接口
 async function fetchTrainingStat(){
@@ -452,28 +517,26 @@ async function get_upcoming_schedules() {
 /** 预约某一次排课：带上排课的日期与开始时间，后端据此把它关联到这条排课上 */
 async function bookSchedule(item) {
   try {
-    await create_appointment({
+    const res = await create_appointment({
       member_id: profile_info.value.id ?? 0,
       course_id: item.course_id,
       appointment_time: `${item.schedule_date} ${item.start_time}`
     })
-    toast.show("预约成功")
+    // 撞车时后端不会拒绝，而是落成「待预约」，要把这件事说清楚，别让会员以为约上了
+    if (res.data?.status === '待预约') {
+      toast.show("该时段你已有预约，已登记为「待预约」，请到前台处理冲突", "error")
+    } else {
+      toast.show("预约成功")
+    }
     await Promise.all([get_upcoming_schedules(), get_Appointments()])
   } catch (err) {
     toast.show(err.friendlyMessage || "预约失败", "error")
   }
 }
 
-async function get_courses(){
-  const res = await getMyCourses()
-  myCourses.value = res.data
-}
-
-
 onMounted(async ()=>{
   await get_Appointments()
   await get_upcoming_schedules()
-  await get_courses()
   await member_info()
 })
 
@@ -614,6 +677,32 @@ async function cancel(item) {
   }
 }
 
+/**
+ * 上课签到：只在上课时段内能点（按钮由后端 can_checkin 控制），
+ * 签到即按课时费从余额里扣，所以要把「扣了多少、还剩多少」明确告诉会员。
+ */
+async function checkin(item) {
+  const ok = await confirmDialog({
+    title: "上课签到",
+    message: "签到后将按本节课的课时费从账户余额中扣除。",
+    details: [
+      { label: "课程", value: courseNameOf(item) || "—" },
+      { label: "时间", value: classTimeOf(item) || "—" },
+      { label: "课时费", value: priceOf(item) },
+      { label: "当前余额", value: `${profile_info.value.balance ?? 0} 元` }
+    ],
+    confirmText: "确认签到"
+  });
+  if (!ok) return;
+  try {
+    const res = await checkinMyAppointment(item.id)
+    toast.show(`签到成功，已扣课时费 ${res.data.charged} 元，余额 ${res.data.balance} 元`)
+    // 余额变了要一并刷新卡片
+    await Promise.all([get_Appointments(), member_info()])
+  } catch (err) {
+    toast.show(err.friendlyMessage || "签到失败", "error")
+  }
+}
 
 </script>
 
